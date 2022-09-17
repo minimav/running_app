@@ -1,0 +1,11 @@
+{% macro autocomplete(container_id, placeholder="", input_id="", search_button_css="", clear_button_css="") %}
+<div class="autocom-wrapper">
+    <div class="search-input" id="{{ container_id }}">
+        <button type="button" {% if button_css %}{{search_button_css}}{% else %}class="btn btn-primary btn-sm"{% endif %}>?</button>
+        <button type="button" {% if button_css %}{{clear_button_css}}{% else %}class="btn btn-danger btn-sm"{% endif %}>x</button>
+        <input type="text" {% if input_id %}id="{{ input_id }}" {% endif %}placeholder="{{ placeholder }}">
+        <div class="autocom-box">
+        </div>
+    </div>
+</div>
+{% endmacro %}

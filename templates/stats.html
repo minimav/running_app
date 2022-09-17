@@ -1,0 +1,230 @@
+{% extends "map_page.html" %}
+{% import 'macros/autocomplete.html' as macros %}
+
+{% block css %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.11/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="{{ url_for('static', path='/css/autocomplete.css') }}">
+{% endblock %}
+
+{% block controls %}
+<div>
+    <label class="option-label">Options</label>
+</div>
+<div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" id="use-cul-de-sacs" checked>
+    <label class="form-check-label" for="use-cul-de-sacs">Include cul-de-sacs</label>
+</div>
+<div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" id="stats-overlay-checkbox" onclick="toggleStatsOpacity();" checked>
+    <label class="form-check-label" for="stats-overlay-checkbox">Show stats overlays</label>
+</div>
+<div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" id="use-num-traversals">
+    <label class="form-check-label" for="use-num-traversals">Colour by number of traversals</label>
+</div>
+<div class="form-group form-inline">
+    <label for="min-segment-length-m-slider" class="form-label">Minimum segment length (metres)</label>
+    <input type="range" class="form-range" min="0" max="250" value="0" step="1" id="min-segment-length-m-slider">
+    <div id="min-segment-length-m">0</div>
+</div>
+<div class="form-group form-inline">
+    <label for="animation-speed" class="form-label">Max missing segments to show:</label>
+    <input type="range" class="form-range" step="100" min="100" max="5000" value="500" id="max-missing-to-show-slider">
+    <div id="max-missing-to-show">500</div>
+</div>
+<div class="form-group form-inline">
+    <label for="animation-speed" class="form-label">Animation speed (days/second):</label>
+    <input type="range" class="form-range" min="1" max="30" value="10" id="animation-speed">
+    <div id="days-per-second">10</div>
+</div>
+<div class="form-group form-inline">
+    <div class="col">
+        <label for="run-date">Start date:</label>
+    </div>
+    <div class="col">
+        <input class="form-control" type="date" value="2020-06-10" id="start-date">
+    </div>
+</div>
+<div class="form-group form-inline">
+    <div class="col">
+        <label for="run-date">End date:</label>
+    </div>
+    <div class="col">
+        <input class="form-control" type="date" value="" id="end-date">
+    </div>
+</div>
+
+<div class="form-group form-inline">
+    <div class="dropdown">
+        <button class="btn btn-primary" type="button" id="area-dropdown" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            Show saved sub area
+        </button>
+        <div class="dropdown-menu" id="area-dropdown-ctn" aria-labelledby="area-dropdown">
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="form-group form-inline">
+    <button type="submit" class="btn btn-primary" id="show-in-date-range-btn" onclick="showInDateRange()">Show in date
+        range</button>
+    <button type="submit" class="btn btn-primary" id="show-all-btn" onclick="showAll()">Show all</button>
+</div>
+<div class="form-group form-inline">
+    <button type="submit" class="btn btn-primary" id="show-missing-btn" onclick="showMissing()">Show missing
+        roads</button>
+    <button type="submit" class="btn btn-primary" id="animate-runs-btn" onclick="animateRuns()">Animate</button>
+</div>
+
+<button type="submit" class="btn btn-danger" id="reset-btn" onclick="removeSegments()">Reset</button>
+
+<button type="button" class="btn btn-light" data-toggle="modal" data-target="#help-modal">Help</button>
+
+<div class="modal fade" id="help-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <nav>
+                <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                    <a class="nav-item nav-link" id="nav-contact-tab" data-toggle="tab" href="#nav-stats" role="tab"
+                        aria-controls="nav-stats" aria-selected="true">Stats</a>
+                    <a class="nav-item nav-link" id="nav-missing-roads-tab" data-toggle="tab" href="#nav-missing-roads"
+                        role="tab" aria-controls="nav-missing-roads" aria-selected="false">Missing Roads</a>
+                    <a class="nav-item nav-link active" id="nav-animation-tab" data-toggle="tab" href="#nav-animation"
+                        role="tab" aria-controls="nav-animation" aria-selected="false">Animation</a>
+                    <a class="nav-item nav-link active" id="nav-sub-areas-tab" data-toggle="tab" href="#nav-sub-areas"
+                        role="tab" aria-controls="nav-sub-areas" aria-selected="false">Sub areas</a>
+                </div>
+
+                <div class="tab-content" id="nav-tabContent">
+                    <div class="tab-pane fade" id="nav-stats" role="tabpanel" aria-labelledby="nav-stats-tab">
+                        <div class="modal-body">
+                            <p>
+                                Runs can be selected within a date range or for all time. If a polygon is drawn on the
+                                map then only segments intersecting the polygon will be returned. Statistics will also
+                                be calculated
+                                using only segments intersecting the polygon. Statistics overall and per run are
+                                displayed in the boxes
+                                to the right of the map. These boxes can be toggled on and off using the 'Toggle stats'
+                                button.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-missing-roads" role="tabpanel"
+                        aria-labelledby="nav-missing-roads-tab">
+                        <div class="modal-body">
+                            <p>
+                                Roads that have never been run can be displayed, either for the whole area or in a
+                                polygon if
+                                one is drawn. No date filtering is applied currently. The slider allows control over how
+                                many
+                                segments are displayed. In the full area there are many segments, which if displayed at
+                                once can
+                                make the map unresponsive. Statistics on missing roads are displayed in the top box to
+                                the right of
+                                the map.
+                            </p>
+                            <p>
+                                Both boxes can be toggled on and off using the 'Toggle stats' button.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade show active" id="nav-animation" role="tabpanel"
+                        aria-labelledby="nav-animation-tab">
+                        <div class="modal-body">
+                            <p>
+                                Clicking 'Animate' will show all runs in date order, at a speed determined by the
+                                slider. To stop the animation, click 'Reset'.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade show active" id="nav-sub-areas" role="tabpanel"
+                        aria-labelledby="nav-sub-areas-tab">
+                        <div class="modal-body">
+                            <p>
+                                Shapes drawn on the map can be saved for the future, known as 'sub areas'. These are
+                                smaller sections of a run area which carry some meaning, e.g. a particular neighbourhood
+                                or a radius around a point.
+                            </p>
+                            <p>
+                                To save a shape, click on it to bring up the save dialog. A name must be given from the
+                                area drawn. The shape can optionally be intersected with
+                                the run area boundary, since for stats purposes outside that boundary is superfluous.
+                                Taking the intersection is the default option.
+                            </p>
+                            <p>
+                                Once saved, your new saved sub area will appear in the dropdown 'Show saved sub area'.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block map %}
+<div class="mapbox">
+    <div id="map"></div>
+    <div id="animation-date" class="row-fluid left-overlay stats-box"></div>
+    <div id="segment-search-box" class="row-fluid right-overlay stats-box">
+        {{ macros.autocomplete(
+        "autocomplete-segment-ids",
+        placeholder="Search for segment IDs",
+        input_id="segment-id-search-input"
+        ) }}
+    </div>
+    <div id="overall-stats-box" class="row-fluid right-overlay stats-box"></div>
+    <div id="run-stats-box" class="row-fluid right-overlay stats-box">
+        <div class="container body-content">
+            <div class="page-header">
+                <div class="form-group">
+                    <fieldset>
+                        <form action="" class="form-group" method="post">
+                            <div class="table-responsive">
+                                <div class="table-responsive">
+                                    <table id="stats-by-run-table" class="table table-striped table-bordered"
+                                        cellspacing="0" width="100%">
+                                        <thead>
+                                            <tr>
+                                                <th id="date-col-header">Date</th>
+                                                <th>Run km</th>
+                                                <th>New km</th>
+                                                <th>% New</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stats-by-run-rows">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </form>
+                    </fieldset>
+                </div>
+                <hr />
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"
+    integrity="sha512-ozq8xQKq6urvuU6jNgkfqAmT7jKN2XumbrX1JiB3TnF7tI48DPI4Gy1GXKD/V3EExgAs1V+pRO7vwtS1LHg0Gw=="
+    crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/1.10.11/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+<script src="https://unpkg.com/intersects/umd/intersects.min.js"></script>
+<script src="{{ url_for('static', path='/javascript/base.js') }}"></script>
+<script src="{{ url_for('static', path='/javascript/map_stats.js') }}"></script>
+{% endblock %}

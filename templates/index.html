@@ -1,0 +1,169 @@
+{% extends "map_page.html" %}
+{% import 'macros/autocomplete.html' as macros %}
+
+{% block css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='/css/autocomplete.css') }}">
+{% endblock %}
+
+{% block controls %}
+<form>
+    <div>
+        <label class="option-label">Run details</label>
+    </div>
+    <div class="form-group form-inline">
+        <div class="col">
+            <label for="run-date">Date:</label>
+        </div>
+        <div class="col">
+            <input class="form-control" type="date" value="" id="run-date">
+        </div>
+    </div>
+
+    <div class="form-group form-inline">
+        <div class="col">
+            <label for="duration">Duration:</label>
+        </div>
+        <div class="col">
+            <input type="time" class="form-control form-control-plaintext" id="duration" value="00:00:00.00"
+                step="0.001">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="comments form-inline">Comments:</label>
+        <span>&nbsp;&nbsp;</span>
+        <textarea class="form-control" id="comments" placeholder=""></textarea>
+    </div>
+
+</form>
+
+<div class="form-group">
+    <div>
+        <label class="option-label">Options</label>
+    </div>
+
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" value="" id="route-on-click" checked>
+        <label class="form-check-label" for="route-on-click">
+            Route between segments
+        </label>
+    </div>
+
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" value="" id="allow-multiple">
+        <label class="form-check-label" for="allow-multiple">
+            Allow multiple run per date
+        </label>
+    </div>
+</div>
+
+<form>
+    <div>
+        <label class="option-label">Run stats</label>
+    </div>
+
+    <div class="form-group form-inline">
+        <div class="col">
+            <label for="current-distance">Distance (km):</label>
+        </div>
+        <div class="col">
+            <input class="form-control" id="current-distance" placeholder="0.0" readonly>
+        </div>
+    </div>
+
+    <div class="form-group form-inline">
+        <div class="col col-7">
+            <label for="current-speed">Speed (mins/mile):</label>
+        </div>
+        <div class="col">
+            <input class="form-control" id="current-speed" placeholder="-" readonly>
+        </div>
+    </div>
+
+</form>
+
+<div class="form-group">
+    <div>
+        <label class="option-label">Upload a run</label>
+    </div>
+
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" id="run-file">
+        <label class="custom-file-label" for="run-file" id="run-file-label">Choose file</label>
+    </div>
+
+    <div>
+        <input class="btn btn-primary btn-sm" type="submit" value="Upload" onclick="upload()">
+    </div>
+</div>
+
+<div class="modal fade" id="helpModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="helpModalLabel">Record run</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    This page can be used to record runs through clicking on the map to create a route.
+                </p>
+                <p>
+                    If `Route between segments` is turned on then clicked points will be 'snapped' to the
+                    closest point on the road network and routing from the previous snapped point will be
+                    performed if there is one.
+                </p>
+                <p>
+                    Otherwise, the raw clicked location will be used and a straight line route will be used
+                    from the previous point, if it exists.
+                </p>
+                <p>
+                    Route clicks can be undone using the `Undo` button. All route clicks can be removed in one
+                    go using `Reset`.
+                </p>
+                <p>
+                    Finished routes can be submitted using `Submit`. If `Allow multiple run per date` is
+                    unchecked then only one run can exist per date, in which case submission will fail if one
+                    already has been recorded for the date in question.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button type="submit" class="btn btn-primary" id="submit" disabled>Submit</button>
+<button type="submit" class="btn btn-primary" id="undo" onclick="undo()" disabled>Undo</button>
+<button type="submit" class="btn btn-primary" id="redo" onclick="redo()" disabled>Redo</button>
+<button type="submit" class="btn btn-danger" id="reset" onclick="reset()" disabled>Reset</button>
+
+<div class="row">
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#helpModal">Help</button>
+</div>
+{% endblock %}
+
+{% block map %}
+<div class="mapbox">
+    <div id="map"></div>
+    <div id="segment-search-box" class="row-fluid right-overlay stats-box">
+        {{ macros.autocomplete(
+        "autocomplete-segment-ids",
+        placeholder="Search for segment IDs",
+        input_id="segment-id-search-input"
+        ) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://unpkg.com/flatbush@3.2.1/flatbush.min.js"></script>
+<script src="{{ url_for('static', path='/javascript/base.js') }}"></script>
+<script src="{{ url_for('static', path='/javascript/geometry.js') }}"></script>
+<script src="{{ url_for('static', path='/javascript/map_draw.js') }}"></script>
+{% endblock %}

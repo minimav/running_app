@@ -1,0 +1,14 @@
+.login-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#login-title {
+    color: #007bff;
+}
+
+#login-button {
+    text-align: center;
+    margin: 10px;
+}

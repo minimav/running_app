@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+<div>
+    <div class="row">
+        <div class="col controls-sidebar" id="controls-col">
+            {% block controls %}{% endblock %}
+        </div>
+        <div class="col">
+            {% block map %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
