@@ -377,7 +377,7 @@ function showStatsByRun(runsByDate, args) {
   let statsByRun = [];
   var endpoint = "/first_seen"
   if (args !== null) {
-    endpoint += "?start_date=" + args.startDate + "&end_date=" + args.endDate
+    endpoint += "?end_date=" + args.endDate
   }
   fetch(endpoint)
     .then(response => response.json())
