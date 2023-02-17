@@ -16,10 +16,12 @@ jobs:
           with:
             node-version: 16
         - run: npm ci
+          working-directory: ./blog
         - run: npm run build
+          working-directory: ./blog
         - name: Deploy
           uses: peaceiris/actions-gh-pages@v3
           with:
             publish_branch: gh-pages
             github_token: ${{ secrets.GITHUB_TOKEN }}
-            publish_dir: blog/dist
+            publish_dir: ./blog/dist
