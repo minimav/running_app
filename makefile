@@ -1,3 +1,5 @@
+.PHONY: blog
+
 build:
 	echo "Building Docker image running-app, "
 	docker build -t running-app .
@@ -17,3 +19,6 @@ start: build
 
 freeze:
 	pip list --format=freeze > requirements-frozen.txt
+
+blog:
+	cd blog; bundle exec jekyll serve --trace
