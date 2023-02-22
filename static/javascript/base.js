@@ -206,3 +206,8 @@ function uuidv4() {
     (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
   )
 }
+
+/** Check that a datetime is valid */
+function validateDatetime(d) {
+  return !isNaN(d.getTime())
+}

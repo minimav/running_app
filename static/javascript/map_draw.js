@@ -65,6 +65,11 @@ document.getElementById("submit").onclick = function () {
       content: "Route has no duration yet."
     })
     return
+  } else if (!validateDatetime(new Date(date))) {
+    populateAndShowModal({
+      title: "Submission error",
+      content: "Date is invalid."
+    })
   }
 
   const payload = {
