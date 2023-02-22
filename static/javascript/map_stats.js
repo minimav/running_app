@@ -261,11 +261,25 @@ function showSegmentsWithTraversals(data, remove) {
 
 /** Parse date range inputs and whether to show the number of traversals or not. */
 function parseArgs() {
-  let startDate = document.getElementById("start-date").value
-  let endDate = document.getElementById("end-date").value
+  let startDateRaw = document.getElementById("start-date").value
+  let endDateRaw = document.getElementById("end-date").value
+
+  let startDate = new Date(startDateRaw)
+  let endDate = new Date(endDateRaw)
+  if (!validateDatetime(startDate)) {
+    populateAndShowModal({ title: "Date error", content: "Start date is invalid." })
+    return
+  } else if (!validateDatetime(endDate)) {
+    populateAndShowModal({ title: "Date error", content: "End date is invalid." })
+    return
+  } else if (startDate > endDate) {
+    populateAndShowModal({ title: "Date error", content: `End date ${endDateRaw} is prior to start date ${startDateRaw}.` })
+    return
+  }
+
   return {
-    "startDate": startDate,
-    "endDate": endDate,
+    "startDate": startDateRaw,
+    "endDate": endDateRaw,
     "numTraversals": $("#user-num-traversals").is(":checked")
   }
 }
@@ -530,6 +544,9 @@ function getRunsToShow(args, url) {
 /** Show runs completed during the date range determined by the date inputs. */
 function showInDateRange() {
   const args = parseArgs()
+  if (args === undefined) {
+    return
+  }
   const endpoint = args.numTraversals == true ? "traversals" : "runs"
   const url = endpoint + "?start_date=" + args.startDate + "&end_date=" + args.endDate
   getRunsToShow(args, url)
@@ -538,6 +555,9 @@ function showInDateRange() {
 /** Show all runs completed (in polygon if given, otherwise everwhere). */
 function showAll() {
   const args = parseArgs()
+  if (args === undefined) {
+    return
+  }
   const url = args.numTraversals == true ? "traversals" : "runs"
   getRunsToShow(args, url)
 }
