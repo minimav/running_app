@@ -144,11 +144,11 @@ function getStyle(numTraversals) {
 }
 
 /** Refesh the statistics table in the lower right pane. */
-function refreshStatByRunTable() {
+function refreshStatsByRunTable() {
   return $("#stats-by-run-table").DataTable({
     "lengthMenu": [[5, 10], [5, 10]],
-    "pageLength": 10,
-    "pagingType": "full_numbers"
+    "pageLength": 5,
+    "pagingType": "full"
   });
 }
 
@@ -169,12 +169,12 @@ function removeSegments(removePolygon) {
 
   statsByRunTable.destroy();
   document.getElementById("stats-by-run-rows").innerHTML = ""
-  statsByRunTable = refreshStatByRunTable();
+  statsByRunTable = refreshStatsByRunTable();
 
   // refresh the geometry if options have changed
-  let includeCulDeSacs = $("#use-cul-de-sacs").is(":checked"),
+  let includeCulDeSacs = true,
     minLengthM = parseInt(document.getElementById("min-segment-length-m-slider").value);
-  if (currentNetworkOptions.minLengthM !== minLengthM || currentNetworkOptions.includeCulDeSacs !== includeCulDeSacs) {
+  if (currentNetworkOptions.minLengthM !== minLengthM) {
     loadGeometry(minLengthM, includeCulDeSacs)
     currentNetworkOptions = {
       minLengthM: minLengthM,
@@ -291,16 +291,12 @@ function showOverallStats(lengthData) {
   const uniqueLengthKm = lengthData !== undefined ? lengthData["unique"].toFixed(1) : '- '
   const percProgress = lengthData !== undefined ? (100 * lengthData["unique"] / lengthData["totalLengthKm"]).toFixed(2) : '- '
   const statsBox = `
-    <div class="stat-label">Total length:</div>
-    <div id="total-length-km">${totalLengthKm}km</div>
-    <div class="stat-label">Length shown (with repeats):</div>
-    <div id="length-km-shown-with-repeats">${withRepeatsKm}km</div>
-    <div class="stat-label">Unique length shown:</div>
-    <div id="length-km-shown">${uniqueLengthKm}km</div>
-    <div class="stat-label">Progress shown:</div>
-    <div id="percentage-covered-shown">${percProgress}%</div>
+    <div><span class="stat-label">Total length: </span>${totalLengthKm}km</div>
+    <div><span class="stat-label">Length (with repeats): </span>${withRepeatsKm}km</div>
+    <div><span class="stat-label">Unique length: </span>${uniqueLengthKm}km</div>
+    <div><span class="stat-label">Progress shown: </span>${percProgress}%</div>
   `
-  document.getElementById("overall-stats-box").innerHTML = statsBox
+  document.getElementById("overall-stats-box-data").innerHTML = statsBox
 }
 
 /** Group segments by date to facilitate calculating stats by date. */
@@ -380,7 +376,7 @@ function buildStatsByRunTable(statsByRun) {
     newRow += "<td>" + s.percNew.toFixed(2) + "%</td>"
     tableBody.append("<tr onmouseover='highlightRow(this);' onmouseout='removeHighlightRow(this);'>" + newRow + "</tr>");
   })
-  statsByRunTable = refreshStatByRunTable();
+  statsByRunTable = refreshStatsByRunTable();
 }
 
 /** Calculate statistics for each run.
@@ -591,15 +587,13 @@ function showMissingSegments(segmentIds) {
 
 /** Display stats on how many roads have not currently been run. */
 function showMissingStats(stats) {
-  var statsBox = '<div class="stat-label">Total length:</div>'
-  statsBox += '<div id="total-length-km">' + stats["totalLengthKm"].toFixed(1) + "km</div>"
-  statsBox += '<div class="stat-label">Total missing length:</div>'
-  statsBox += '<div id="total-missing-length-km">' + stats["totalMissingLengthKm"].toFixed(1) + "km</div>"
-  statsBox += '<div class="stat-label">% missing:</div>'
-  statsBox += '<div id="perc-missing">' + (100 * stats["totalMissingLengthKm"] / stats["totalLengthKm"]).toFixed(2) + "%</div>"
-  statsBox += '<div class="stat-label">Number missing segments:</div>'
-  statsBox += '<div id="num-missing-segments">' + stats["numMissing"] + "(of " + stats["totalNumSegments"] + ")</div>"
-  document.getElementById("overall-stats-box").innerHTML = statsBox
+  let statsBox = `
+    <div><span class="stat-label">Total length: </span>${stats["totalLengthKm"].toFixed(1)}km</div>
+    <div><span class="stat-label">Total missing length: </span>${stats["totalMissingLengthKm"].toFixed(1)}km</div>
+    <div><span class="stat-label">% missing: </span>${(100 * stats["totalMissingLengthKm"] / stats["totalLengthKm"]).toFixed(2)}%</div>
+    <div><span class="stat-label"># missing segments: </span><br>${stats["numMissing"]} (of ${stats["totalNumSegments"]})</div>
+  `
+  document.getElementById("overall-stats-box-data").innerHTML = statsBox
 }
 
 /** Show all roads that have not been run (in a polygon if drawn, otherwise everywhere). */
@@ -667,14 +661,18 @@ function animateRuns() {
     })
 }
 
-/** Toggle opacity of stats panes to the right of the map. */
-function toggleStatsOpacity() {
-  let ids = ["overall-stats-box", "run-stats-box"];
-  ids.forEach(id => {
-    el = document.getElementById(id)
-    el.style.opacity == "0" ? el.style.opacity = "1" : el.style.opacity = "0"
-  })
+/** Toggle whether the stats overlay is collapsed or not */
+function collapseStatsOverlay() {
+  let classList = document.getElementById("stats-box-data").classList
+  let toggle = document.getElementById("toggle-stats-collapse")
+  if (classList.contains("collapse")) {
+    toggle.innerHTML = '<i class="fa fa-compress"></i>'
+  } else {
+    toggle.innerHTML = '<i class="fa fa-expand"></i>'
+  }
+  classList.toggle('collapse')
 }
+
 
 /** Remove the currently drawn polygon from the map. */
 function removeDrawnPolygon() {
@@ -949,7 +947,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
   showOverallStats()
 
   initialiseGeometry()
-  statsByRunTable = refreshStatByRunTable()
+  statsByRunTable = refreshStatsByRunTable()
 
   wkt = makeWktReader()
 

@@ -6,19 +6,12 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.11/css/jquery.dataTables.min.css" />
 <link rel="stylesheet" href="{{ url_for('static', path='/css/autocomplete.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 {% endblock %}
 
 {% block controls %}
 <div>
     <label class="option-label">Options</label>
-</div>
-<div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" id="use-cul-de-sacs" checked>
-    <label class="form-check-label" for="use-cul-de-sacs">Include cul-de-sacs</label>
-</div>
-<div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" id="stats-overlay-checkbox" onclick="toggleStatsOpacity();" checked>
-    <label class="form-check-label" for="stats-overlay-checkbox">Show stats overlays</label>
 </div>
 <div class="form-check form-check-inline">
     <input class="form-check-input" type="checkbox" id="use-num-traversals">
@@ -175,42 +168,47 @@
 <div class="mapbox">
     <div id="map"></div>
     <div id="animation-date" class="row-fluid left-overlay stats-box"></div>
-    <div id="segment-search-box" class="row-fluid right-overlay stats-box">
-        {{ macros.autocomplete(
-        "autocomplete-segment-ids",
-        placeholder="Search for segment IDs",
-        input_id="segment-id-search-input"
-        ) }}
-    </div>
-    <div id="overall-stats-box" class="row-fluid right-overlay stats-box"></div>
-    <div id="run-stats-box" class="row-fluid right-overlay stats-box">
-        <div class="container body-content">
-            <div class="page-header">
-                <div class="form-group">
-                    <fieldset>
-                        <form action="" class="form-group" method="post">
-                            <div class="table-responsive">
+    <div id="stats-box" class="row-fluid right-overlay stats-box">
+        <span style="font-size: 20px;">Stats</span>
+        <button id="toggle-stats-collapse" class="btn btn-sm btn-secondary" onclick="collapseStatsOverlay();">
+            <i class="fa fa-compress"></i>
+        </button>
+        <div id="stats-box-data">
+            <div id="overall-stats-box-data"></div>
+            <hr>
+            <div id="run-stats-box-data" class="container body-content">
+                <div class="page-header">
+                    <div class="form-group">
+                        <fieldset>
+                            <form action="" class="form-group" method="post">
                                 <div class="table-responsive">
-                                    <table id="stats-by-run-table" class="table table-striped table-bordered"
-                                        cellspacing="0" width="100%">
-                                        <thead>
-                                            <tr>
-                                                <th id="date-col-header">Date</th>
-                                                <th>Run km</th>
-                                                <th>New km</th>
-                                                <th>% New</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="stats-by-run-rows">
-                                        </tbody>
-                                    </table>
+                                    <div class="table-responsive">
+                                        <table id="stats-by-run-table" class="table table-striped table-bordered"
+                                            cellspacing="0" width="100%">
+                                            <thead>
+                                                <tr>
+                                                    <th id="date-col-header">Date</th>
+                                                    <th>Run km</th>
+                                                    <th>New km</th>
+                                                    <th>% New</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="stats-by-run-rows">
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
-                        </form>
-                    </fieldset>
+                            </form>
+                        </fieldset>
+                    </div>
                 </div>
-                <hr />
             </div>
+            <hr>
+            {{ macros.autocomplete(
+            "autocomplete-segment-ids",
+            placeholder="Search for segment IDs",
+            input_id="segment-id-search-input"
+            ) }}
         </div>
     </div>
 </div>

@@ -43,7 +43,6 @@
   position: absolute;
   right: 10px;
   z-index: 600;
-  pointer-events: none;
 }
 
 .mapbox .left-overlay {
@@ -73,21 +72,18 @@
   width: 300px;
 }
 
-#overall-stats-box {
+#stats-box {
   top: 10px;
   width: 300px;
 }
 
-#run-stats-box {
-  top: 230px;
-  width: 300px;
-  height: 390px;
+#run-stats-box-data {
+  font-size: 12px;
 }
 
 @media (max-width: 1000px) {
 
-  #run-stats-box,
-  #overall-stats-box {
+  #stats-box {
     display: none;
   }
 }
@@ -105,6 +101,12 @@
 #run-stats-box {
   font-size: x-small;
   pointer-events: initial;
+}
+
+#toggle-stats-collapse {
+  margin-left: auto;
+  margin-right: 0;
+  float: right;
 }
 
 .search-input {
