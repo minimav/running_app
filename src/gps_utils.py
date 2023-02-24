@@ -20,7 +20,7 @@ def parse_tcx_file(
     """Parse an uploaded .tcx file."""
     try:
         parsed_xml = ElementTree.fromstring(raw_xml)
-    except:
+    except Exception:
         raise XMLParsingError("Could not parse XML file", raw_xml)
 
     points = []

@@ -27,10 +27,11 @@ class SegmentList(BaseModel):
 
 
 class SegmentCollection(BaseModel):
-    """Segments for which to toggle their ignore status in an area when calculating stats.
+    """Segments for which to toggle their ignore status when calculating stats.
 
-    Such segments could be out of scope because they are/were incorrectly tagged in OSM, or
-    because they are artefacts of how complex junctions or multi-lane roads are digitised.
+    Such segments could be out of scope because they are/were incorrectly
+    tagged in OSM, or because they are artefacts of how complex junctions or
+    multi-lane roads are digitised.
 
     Attributes
     ----------
@@ -62,7 +63,7 @@ class ValidationMixin:
         format is 'LINESTRING(lat_1 lng_1, lat_2 lng_2, ...)'.
         """
         if v is None:
-            # should only occur for migration of old v1 schema data to v2 schema
+            # should only occur for migration of old v1 schema data to v2
             return True
 
         correct_start = v.startswith("LINESTRING(")
@@ -90,8 +91,8 @@ class LoggedRun(BaseModel, ValidationMixin):
     comments: Optional[str]
         Comments on the run.
     linestring: Optional[str]
-         Geometry representing the run, usually from GPS tracking. Format is WKT linestring, e.g.
-        "LINESTRING(lat_1 lng_1, lat_2 lng_2, ...)".
+         Geometry representing the run, usually from GPS tracking. Format is
+         WKT linestring, e.g. "LINESTRING(lat_1 lng_1, lat_2 lng_2, ...)".
     allow_multiple: bool
         If True allows multiple runs to be logged for a given date.
     segment_traversals: dict[str, int]
@@ -155,7 +156,8 @@ class SnapDataForRouting(BaseModel):
     from_segment_id: str
         ID of segment to start routing from.
     from_segment_distance_along_segment_metres: float
-        Distance along `previous_segment_id` in metres in direction of geometry.
+        Distance along `previous_segment_id` in metres in direction of
+        geometry.
     from_segment_start_node: int
         Start node of the segment we're routing from.
     from_segment_end_node: int

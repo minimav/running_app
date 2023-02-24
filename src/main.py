@@ -2,19 +2,17 @@
 """
 from datetime import timedelta
 from functools import lru_cache
-import json
 import logging
 from logging.config import dictConfig
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import (
     BackgroundTasks,
     Depends,
     FastAPI,
     File,
-    Form,
     HTTPException,
     Request,
     Response,
@@ -81,13 +79,17 @@ async def custom_401_handler(*args, **kwargs):
 async def get_current_user(
     token: str = Depends(auth.oauth2_scheme), db: RunningDatabase = Depends(database)
 ):
-    """Try to get the current user's details if they have a valid token in header/cookie."""
+    """Try to get user's details if they have valid token in header/cookie."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
     )
     try:
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        payload = jwt.decode(
+            token,
+            auth.SECRET_KEY,
+            algorithms=[auth.ALGORITHM],
+        )
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
@@ -101,7 +103,9 @@ async def get_current_user(
     return user
 
 
-def get_routing_graph(current_user: Dict, db: RunningDatabase, respect_ignored=False):
+def get_routing_graph(
+    current_user: models.CurrentUser, db: RunningDatabase, respect_ignored: bool = False
+):
     """Load the graph for routing for the current user and area."""
     run_area = current_user.make_run_area()
     graph = db.get_run_area_graph(current_user.username, current_user.active_area_name)
@@ -158,10 +162,11 @@ def login(request: Request):
 
 
 @app.post("/register")
-async def login_for_access_token(
+async def register_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: RunningDatabase = Depends(database),
 ):
+    """Register a user, if the username does not already exist."""
     try:
         hashed_password = auth.get_password_hash(form_data.password)
         db.insert_user(form_data.username, hashed_password)
@@ -211,11 +216,11 @@ def map_update(
 
 
 @app.get("/current_user_areas", response_model=List[models.RunArea])
-def map_update(
+def get_current_user_areas(
     current_user: models.CurrentUser = Depends(get_current_user),
     db: RunningDatabase = Depends(database),
 ):
-    """Page for updating which roads are considered part of the map."""
+    """Get the areas associated to the current user."""
     return db.get_areas_for_user(current_user.username, artifacts_exist=True)
 
 
@@ -506,7 +511,7 @@ async def route(
             route.append(
                 models.SegmentTraversal(
                     segment_id=snap_data.from_segment_id,
-                    start_distance_metres=snap_data.from_segment_distance_along_segment_metres,
+                    start_distance_metres=snap_data.from_segment_distance_along_segment_metres,  # noqa: E501
                     end_distance_metres=from_segment_length_metres,
                     starts_at_end=False,
                     ends_at_end=True,
@@ -516,7 +521,7 @@ async def route(
             route.append(
                 models.SegmentTraversal(
                     segment_id=snap_data.from_segment_id,
-                    start_distance_metres=snap_data.from_segment_distance_along_segment_metres,
+                    start_distance_metres=snap_data.from_segment_distance_along_segment_metres,  # noqa: E501
                     end_distance_metres=0.0,
                     starts_at_end=False,
                     ends_at_end=False,
@@ -529,7 +534,7 @@ async def route(
                 models.SegmentTraversal(
                     segment_id=snap_data.to_segment_id,
                     start_distance_metres=0.0,
-                    end_distance_metres=snap_data.to_segment_distance_along_segment_metres,
+                    end_distance_metres=snap_data.to_segment_distance_along_segment_metres,  # noqa: E501
                     starts_at_end=False,
                     ends_at_end=distance_at_end_of_segment(
                         to_segment_length_metres,
@@ -542,7 +547,7 @@ async def route(
                 models.SegmentTraversal(
                     segment_id=snap_data.to_segment_id,
                     start_distance_metres=to_segment_length_metres,
-                    end_distance_metres=snap_data.to_segment_distance_along_segment_metres,
+                    end_distance_metres=snap_data.to_segment_distance_along_segment_metres,  # noqa: E501
                     starts_at_end=True,
                     ends_at_end=False,
                 )
@@ -555,14 +560,14 @@ async def route(
             snap_data.from_segment_start_node,
             snap_data.to_segment_start_node,
             {
-                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,
+                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,  # noqa: E501
                 "end_distance_metres": 0.0,
                 "starts_at_end": False,
                 "ends_at_end": False,
             },
             {
                 "start_distance_metres": 0.0,
-                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,
+                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,  # noqa: E501
                 "starts_at_end": False,
                 "ends_at_end": False,
             },
@@ -571,14 +576,14 @@ async def route(
             snap_data.from_segment_start_node,
             snap_data.to_segment_end_node,
             {
-                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,
+                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,  # noqa: E501
                 "end_distance_metres": 0.0,
                 "starts_at_end": False,
                 "ends_at_end": False,
             },
             {
                 "start_distance_metres": to_segment_length_metres,
-                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,
+                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,  # noqa: E501
                 "starts_at_end": False,
                 "ends_at_end": False,
             },
@@ -587,14 +592,14 @@ async def route(
             snap_data.from_segment_end_node,
             snap_data.to_segment_start_node,
             {
-                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,
+                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,  # noqa: E501
                 "end_distance_metres": from_segment_length_metres,
                 "starts_at_end": False,
                 "ends_at_end": True,
             },
             {
                 "start_distance_metres": 0.0,
-                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,
+                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,  # noqa: E501
                 "starts_at_end": False,
                 "ends_at_end": False,
             },
@@ -603,14 +608,14 @@ async def route(
             snap_data.from_segment_end_node,
             snap_data.to_segment_end_node,
             {
-                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,
+                "start_distance_metres": snap_data.from_segment_distance_along_segment_metres,  # noqa: E501
                 "end_distance_metres": from_segment_length_metres,
                 "starts_at_end": False,
                 "ends_at_end": True,
             },
             {
                 "start_distance_metres": to_segment_length_metres,
-                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,
+                "end_distance_metres": snap_data.to_segment_distance_along_segment_metres,  # noqa: E501
                 "starts_at_end": False,
                 "ends_at_end": False,
             },
@@ -629,7 +634,7 @@ async def route(
             )
             edges = list(zip(nodes_in_route, nodes_in_route[1:]))
 
-            # incorporate ending the starting segment and starting the ending segment
+            # incorporate ending the start segment and starting the end segment
             start_length_metres = abs(
                 start_segment_data["start_distance_metres"]
                 - start_segment_data["end_distance_metres"]
@@ -647,7 +652,7 @@ async def route(
                 min_length_path = edges
                 min_path_start_segment_data = start_segment_data
                 min_path_end_segment_data = end_segment_data
-        except Exception as e:
+        except Exception:
             pass
 
     # no path for any node pairing between the segments we're routing between

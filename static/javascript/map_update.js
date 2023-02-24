@@ -43,8 +43,8 @@ document.getElementById("submit").onclick = function () {
     })
 }
 
-/** Create key from nodes from which to look up geometry. 
- * 
+/** Create key from nodes from which to look up geometry.
+ *
  * We always use a fixed ordering on the nodes and store the shortest
  * edge for that node pair (in either orientation).
 */
@@ -160,7 +160,7 @@ function removeSegmentsNoLongerInView(spatialIndexKeysOfSegmentsInNewView) {
 }
 
 /** Retain only spatial index keys of segments in the new map view which weren't previously.
- * 
+ *
  * Also include ignored segments to make sure they get plotted when we're in update-map mode.
  * When recording runs, they will be correctly ignored later on.
 */
@@ -185,8 +185,8 @@ function sendSegmentsToBack() {
   })
 }
 
-/** Show segments on the map currently in view. 
- * 
+/** Show segments on the map currently in view.
+ *
  * Only genuinely new segments which were not previously in view will be added.
  * Segments not in the new view but in view previously will be removed.
 */
