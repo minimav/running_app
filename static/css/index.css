@@ -190,3 +190,28 @@ td {
   height: 200px;
   overflow-y: scroll;
 }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: lightgrey;
+  border-radius: 100px;
+  height: 0.3rem;
+  cursor: pointer;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: 0px;
+  background-color: #007bff;
+  height: 1rem;
+  width: 1rem;
+  border-radius: 1rem;
+}
+
+input[type="checkbox"] {
+  accent-color: #007bff;
+}
