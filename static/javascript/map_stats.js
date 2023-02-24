@@ -280,7 +280,7 @@ function parseArgs() {
   return {
     "startDate": startDateRaw,
     "endDate": endDateRaw,
-    "numTraversals": $("#user-num-traversals").is(":checked")
+    "numTraversals": document.getElementById("use-num-traversals").checked
   }
 }
 
