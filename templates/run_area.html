@@ -1,65 +1,87 @@
-{% extends "map_page.html" %}
-{% import 'macros/autocomplete.html' as macros %}
-
-{% block css %}
-{{ super() }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-{% endblock %}
-
-{% block controls %}
+{% extends "map_page.html" %} {% import 'macros/autocomplete.html' as macros %}
+{% block css %} {{ super() }}
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
+/>
+{% endblock %} {% block controls %}
 
 <label class="option-label">Create a run area</label>
 <div class="form-group">
-    <label for="run-area-name form-inline">Area name:</label>
-    <span>&nbsp;&nbsp;</span>
-    <input type="text" class="form-control form-control-plaintext" id="run-area-name">
+  <label for="run-area-name form-inline">Area name:</label>
+  <span>&nbsp;&nbsp;</span>
+  <input
+    type="text"
+    class="form-control form-control-plaintext"
+    id="run-area-name"
+  />
 </div>
 
-<button type="submit" class="btn btn-primary" id="create-run-area-submit">Submit</button>
-<button type="submit" class="btn btn-default" data-toggle="modal" data-target="#helpModal">Help</button>
+<button type="submit" class="btn btn-primary" id="create-run-area-submit">
+  Submit
+</button>
+<button
+  type="submit"
+  class="btn btn-default"
+  data-toggle="modal"
+  data-target="#helpModal"
+>
+  Help
+</button>
 
-<div class="modal fade" id="helpModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="helpModalLabel">Create run area</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>
-                    This page can be used to create a run area within which to log runs.
-                </p>
-                <p>
-                    Simply draw a polygon/shape of the area within which you'd like to track your runs, then
-                    click `Submit`. Note that large areas > 2000km squared as not supported.
-                </p>
-                <p>
-                    Upon creating a new area, a background task will retrieve OSM graph and geometry data to
-                    enable routing and completion statistics. Once this is finished, you can visit `Home` to
-                    start logging runs.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
+<div
+  class="modal fade"
+  id="helpModal"
+  tabindex="-1"
+  role="dialog"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">Create run area</h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>
+          This page can be used to create a run area within which to log runs.
+        </p>
+        <p>
+          Simply draw a polygon/shape of the area within which you'd like to
+          track your runs, then click `Submit`. Note that large areas > 2000km
+          squared as not supported.
+        </p>
+        <p>
+          Upon creating a new area, a background task will retrieve OSM graph
+          and geometry data to enable routing and completion statistics. Once
+          this is finished, you can visit `Home` to start logging runs.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Close
+        </button>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block map %}
-<div class="mapbox" style="opacity:1;">
-    <div id="map"></div>
+{% endblock %} {% block map %}
+<div class="mapbox" style="opacity: 1">
+  <div id="map"></div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"
-    integrity="sha512-ozq8xQKq6urvuU6jNgkfqAmT7jKN2XumbrX1JiB3TnF7tI48DPI4Gy1GXKD/V3EExgAs1V+pRO7vwtS1LHg0Gw=="
-    crossorigin="anonymous"></script>
+{% endblock %} {% block scripts %} {{ super() }}
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"
+  integrity="sha512-ozq8xQKq6urvuU6jNgkfqAmT7jKN2XumbrX1JiB3TnF7tI48DPI4Gy1GXKD/V3EExgAs1V+pRO7vwtS1LHg0Gw=="
+  crossorigin="anonymous"
+></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 <script src="{{ url_for('static', path='/javascript/base.js') }}"></script>
 <script src="{{ url_for('static', path='/javascript/run_area.js') }}"></script>

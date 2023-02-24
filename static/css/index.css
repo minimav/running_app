@@ -82,7 +82,6 @@
 }
 
 @media (max-width: 1000px) {
-
   #stats-box {
     display: none;
   }
@@ -138,12 +137,12 @@ td {
 }
 
 #current-time {
-  color: lightslategrey
+  color: lightslategrey;
 }
 
 .distance-tooltip {
-  background-color: rgba(255, 255, 255, 0.0);
-  border-color: rgba(255, 255, 255, 0.0);
+  background-color: rgba(255, 255, 255, 0);
+  border-color: rgba(255, 255, 255, 0);
   box-shadow: none;
   color: white;
   font-weight: bold;
@@ -183,7 +182,7 @@ td {
 }
 
 .area-dropdown-name {
-  width: 300px
+  width: 300px;
 }
 
 #area-dropdown-ctn {

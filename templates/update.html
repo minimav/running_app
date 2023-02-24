@@ -1,64 +1,75 @@
-{% extends "map_page.html" %}
-{% import 'macros/autocomplete.html' as macros %}
-
-{% block css %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', path='/css/autocomplete.css') }}">
-{% endblock %}
-
-{% block controls %}
-<div class="modal fade" id="helpModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="helpModalLabel">Update map</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>
-                    Segments can be removed from (or added back to) the set of roads on
-                    which runs can be recorded.
-                </p>
-                <p>
-                    Black segments are those which are currently not being used. Clicking such segment will
-                    turn it green. Clicking on a segment currently being used will turn it red.
-                </p>
-                <p>
-                    Clicking `Reset` button will return to the previously saved status.
-                </p>
-                <p>
-                    Clicking the `Submit` button will save any changes.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
+{% extends "map_page.html" %} {% import 'macros/autocomplete.html' as macros %}
+{% block css %} {{ super() }}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', path='/css/autocomplete.css') }}"
+/>
+{% endblock %} {% block controls %}
+<div
+  class="modal fade"
+  id="helpModal"
+  tabindex="-1"
+  role="dialog"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">Update map</h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Segments can be removed from (or added back to) the set of roads on
+          which runs can be recorded.
+        </p>
+        <p>
+          Black segments are those which are currently not being used. Clicking
+          such segment will turn it green. Clicking on a segment currently being
+          used will turn it red.
+        </p>
+        <p>
+          Clicking `Reset` button will return to the previously saved status.
+        </p>
+        <p>Clicking the `Submit` button will save any changes.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Close
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
 <button type="submit" class="btn btn-primary" id="submit">Submit</button>
-<button type="submit" class="btn btn-danger" id="reset" onclick="reset()">Reset</button>
-<button type="button" class="btn btn-default" data-toggle="modal" data-target="#helpModal">Help</button>
-{% endblock %}
-
-{% block map %}
+<button type="submit" class="btn btn-danger" id="reset" onclick="reset()">
+  Reset
+</button>
+<button
+  type="button"
+  class="btn btn-default"
+  data-toggle="modal"
+  data-target="#helpModal"
+>
+  Help
+</button>
+{% endblock %} {% block map %}
 <div class="mapbox">
-    <div id="map"></div>
-    <div id="segment-search-box" class="row-fluid right-overlay stats-box">
-        {{ macros.autocomplete(
-        "autocomplete-segment-ids",
-        placeholder="Search for segment IDs",
-        input_id="segment-id-search-input"
-        ) }}
-    </div>
+  <div id="map"></div>
+  <div id="segment-search-box" class="row-fluid right-overlay stats-box">
+    {{ macros.autocomplete( "autocomplete-segment-ids", placeholder="Search for
+    segment IDs", input_id="segment-id-search-input" ) }}
+  </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
+{% endblock %} {% block scripts %} {{ super() }}
 <script src="https://unpkg.com/flatbush@3.2.1/flatbush.min.js"></script>
 <script src="{{ url_for('static', path='/javascript/base.js') }}"></script>
 <script src="{{ url_for('static', path='/javascript/geometry.js') }}"></script>

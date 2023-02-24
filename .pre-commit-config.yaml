@@ -16,6 +16,11 @@ repos:
   rev: 22.10.0
   hooks:
     - id: black
+- repo: https://github.com/pre-commit/mirrors-prettier
+  rev: v2.7.1
+  hooks:
+    - id: prettier
+      types_or: [css, html, javascript]
 - repo: https://github.com/charliermarsh/ruff-pre-commit
   rev: 'v0.0.221'
   hooks:
