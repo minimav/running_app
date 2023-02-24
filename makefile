@@ -7,6 +7,11 @@ build:
 clean:
 	docker system prune
 
+install:
+	pip install --upgrade pip
+	pip install -r requirements.txt
+	pre-commit install
+
 run-local-dev:
 	RUNNING_APP_MODE=DEV python src/main.py
 
