@@ -123,21 +123,54 @@ function loadGeometry(minLengthM, includeCulDeSacs) {
     })
 }
 
+/** Get colour for a value along a gradient between two colours.
+ *  From https://stackoverflow.com/a/27709336
+ */
+function getGradientColour(startColour, endColour, percent) {
+  // strip the leading #
+  startColour = startColour.replace(/^\s*#|\s*$/g, '');
+  endColour = endColour.replace(/^\s*#|\s*$/g, '');
+
+  // get colors
+  var startRed = parseInt(startColour.substr(0, 2), 16),
+    startGreen = parseInt(startColour.substr(2, 2), 16),
+    startBlue = parseInt(startColour.substr(4, 2), 16);
+
+  var endRed = parseInt(endColour.substr(0, 2), 16),
+    endGreen = parseInt(endColour.substr(2, 2), 16),
+    endBlue = parseInt(endColour.substr(4, 2), 16);
+
+  // calculate new colour
+  var diffRed = endRed - startRed;
+  var diffGreen = endGreen - startGreen;
+  var diffBlue = endBlue - startBlue;
+
+  diffRed = ((diffRed * percent) + startRed).toString(16).split('.')[0];
+  diffGreen = ((diffGreen * percent) + startGreen).toString(16).split('.')[0];
+  diffBlue = ((diffBlue * percent) + startBlue).toString(16).split('.')[0];
+
+  // ensure 2 digits by color
+  if (diffRed.length == 1) diffRed = '0' + diffRed
+  if (diffGreen.length == 1) diffGreen = '0' + diffGreen
+  if (diffBlue.length == 1) diffBlue = '0' + diffBlue
+  return `#${diffRed}${diffGreen}${diffBlue}`;
+};
+
 /** Style for a polyline based on the number of times that segment has been traversed. */
-function getStyle(numTraversals) {
-  var color;
-  if (numTraversals <= 2) {
-    color = "#ec7014"
-  } else if (numTraversals <= 5) {
-    color = "#cc4c02"
-  } else if (numTraversals <= 10) {
-    color = "#993404"
-  } else if (numTraversals > 10) {
-    color = "#662506"
-  }
+function getStyleForNumTraversals(numTraversals, maxTraversals) {
   return {
-    color: color,
+    color: getGradientColour("#FFFFFF", "#007bff", Math.min(1.0, numTraversals / maxTraversals)),
     weight: 2,
+    opacity: 1.0,
+    smoothFactor: 1
+  }
+}
+
+/** Style for background of a polyline. */
+function getStyleForBackgroundLine() {
+  return {
+    color: "black",
+    weight: 3,
     opacity: 1.0,
     smoothFactor: 1
   }
@@ -233,17 +266,34 @@ function showSegments(data, remove) {
 function showSegmentsWithTraversals(data, remove) {
   if (remove) { removeSegments(false) }
   var newSegments = [], segmentCounts = {};
+
+  // distribution of segments run will be very right skewed, hence to get a good
+  // colour distribution we simply use a lower cap than the true maximum number
+  // of traversals (rather than make the gradient logarithmic, which would be a
+  // more principled way of doing this)
+  var maxTraversals = Math.max(...data.map(d => d.num_traversals));
+  let traversalCap = 10;
+  maxTraversals = Math.min(traversalCap, maxTraversals)
+
   data.forEach(d => {
     let segment = segmentData[d.segment_id]
     try {
+      let coords = segment["geometry"]["coordinates"].map(x => { return [x[1], x[0]] });
       let segmentPolyline = new L.Polyline(
-        segment["geometry"]["coordinates"].map(x => { return [x[1], x[0]] }),
-        getStyle(d.num_traversals)
+        coords,
+        getStyleForNumTraversals(d.num_traversals, maxTraversals)
+      )
+      let backgroundSegmentPolyline = new L.Polyline(
+        coords,
+        getStyleForBackgroundLine()
       )
       segmentPolyline.bindTooltip("Segment Id: " + d.segment_id + ", " + d.num_traversals + " traversals")
       segmentPolyline.on('click', function (e) { zoomToSegment(d.segment_id) });
       segmentCounts[d.segment_id] = d.num_traversals
       segmentPolylinesById[d.segment_id] = segmentPolyline
+
+      // push background first so it is plotted underneath
+      newSegments.unshift(backgroundSegmentPolyline)
       newSegments.push(segmentPolyline)
     } catch (err) { }
   })
@@ -280,7 +330,7 @@ function parseArgs() {
   return {
     "startDate": startDateRaw,
     "endDate": endDateRaw,
-    "numTraversals": $("#user-num-traversals").is(":checked")
+    "numTraversals": document.getElementById("use-num-traversals").checked
   }
 }
 
