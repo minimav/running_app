@@ -1,14 +1,14 @@
 .login-form {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 #login-title {
-    color: #007bff;
+  color: #007bff;
 }
 
 #login-button {
-    text-align: center;
-    margin: 10px;
+  text-align: center;
+  margin: 10px;
 }
