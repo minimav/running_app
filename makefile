@@ -18,7 +18,7 @@ start: build
 	docker run -p 1234:1234 -e RUNNING_APP_MODE=PROD running-app
 
 freeze:
-	pip list --format=freeze > requirements-frozen.txt
+	pip list --format=freeze > requirements.txt
 
 blog:
 	cd blog; bundle exec jekyll serve --trace

@@ -1,4 +1,5 @@
 """Exceptions."""
+from models import RunArea, SubRunArea
 
 
 class UsernameExistsError(ValueError):

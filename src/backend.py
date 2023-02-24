@@ -4,7 +4,7 @@ from functools import lru_cache
 import json
 import os
 import sqlite3
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 import uuid
 
 from networkx.readwrite import json_graph
@@ -81,7 +81,11 @@ class RunningDatabase(object):
         },
     }
 
-    def __init__(self, name: str = "running", clean: bool = False, create: bool = True):
+    def __init__(
+        self,
+        name: str = "running",
+        clean: bool = False,
+    ):
         self.name = name
         if clean:
             self.clean()
@@ -94,7 +98,12 @@ class RunningDatabase(object):
         return sqlite3.connect(f"{self.name}.db")
 
     def execute(
-        self, query, query_params=None, expect_data=False, many=False, one=False
+        self,
+        query: str,
+        query_params: Optional[Union[Sequence[tuple], tuple]] = None,
+        expect_data: bool = False,
+        many: bool = False,
+        one: bool = False,
     ):
         """Execute a query."""
         conn = self.db
@@ -257,9 +266,9 @@ class RunningDatabase(object):
     ) -> List[RunArea]:
         """Return areas created by this user if they exist.
 
-        Use `artifacts_exist` to control whether we get all run areas, regardless of their
-        graph and geometry having been saved yet (default), or just those for which both
-        artifacts exist.
+        Use `artifacts_exist` to control whether we get all run areas,
+        regardless of their graph and geometry having been saved yet (default),
+        or just those for which both artifacts exist.
         """
         artifacts_clause = ""
         if artifacts_exist:
@@ -275,7 +284,11 @@ class RunningDatabase(object):
             WHERE username = ?
             {artifacts_clause}
         """
-        results = self.execute(query, query_params=(username,), expect_data=True)
+        results = self.execute(
+            query,
+            query_params=(username,),
+            expect_data=True,
+        )
         return [
             RunArea(
                 username=username,
@@ -292,7 +305,10 @@ class RunningDatabase(object):
         if any(run_area.area_name == area.area_name for area in existing_areas):
             raise exceptions.RunAreaExistsError(run_area)
 
-        query = "INSERT INTO run_areas (username, area_name, polygon, active) VALUES (?, ?, ?, ?)"
+        query = """
+            INSERT INTO run_areas (username, area_name, polygon, active)
+            VALUES (?, ?, ?, ?)
+        """
         query_params = (
             run_area.username,
             run_area.area_name,
@@ -450,8 +466,7 @@ class RunningDatabase(object):
     def update_ignored_segments(self, segment_collection: SegmentCollection):
         """Update the table of segments which should be ignored."""
         run_area = BaseRunArea(
-            username=segment_collection.username,
-            area_name=segment_collection.area_name
+            username=segment_collection.username, area_name=segment_collection.area_name
         )
         currently_ignored_segment_ids = set(self.ignored_segment_ids(run_area))
 
@@ -483,7 +498,7 @@ class RunningDatabase(object):
 
     def make_date_clause(
         self, start_date: Optional[str] = None, end_date: Optional[str] = None
-    ) -> str:
+    ) -> Dict[str, Any]:
         """Create clause to filter runs between start and end dates."""
         if start_date is None and end_date is None:
             return {"clause": "WHERE 1 = 1", "query_params": []}
@@ -539,7 +554,7 @@ class RunningDatabase(object):
                  st.traversals
             FROM segment_traversals st
             INNER JOIN (
-                SELECT 
+                SELECT
                     id,
                     date
                 FROM logged_runs
@@ -717,7 +732,7 @@ class RunningDatabase(object):
         query = """
             SELECT
                 username,
-                area_name, 
+                area_name,
                 sub_area_name,
                 polygon
             FROM sub_run_areas
@@ -750,7 +765,7 @@ class RunningDatabase(object):
         query = """
             SELECT
                 username,
-                area_name, 
+                area_name,
                 sub_area_name,
                 polygon
             FROM sub_run_areas
@@ -805,7 +820,7 @@ class RunningDatabase(object):
 
     def remove_run_area(self, run_area: RunArea) -> None:
         """Remove a run area from the database.
-        
+
         This requires data being removed from several tables.
         """
         run_area_query_params = (run_area.username, run_area.area_name)
@@ -817,17 +832,21 @@ class RunningDatabase(object):
             WHERE username = ?
                 AND area_name = ?
         """
-        active = self.execute(query, query_params=run_area_query_params, expect_data=True, one=True)
-        
+        active = self.execute(
+            query, query_params=run_area_query_params, expect_data=True, one=True
+        )
+
         query = """
-            SELECT area_name 
-            FROM run_areas 
+            SELECT area_name
+            FROM run_areas
             WHERE username = ?
                 AND area_name != ?
         """
-        results = self.execute(query, query_params=run_area_query_params, expect_data=True, one=True)
+        results = self.execute(
+            query, query_params=run_area_query_params, expect_data=True, one=True
+        )
         run_area_names = [area_name for area_name, *_ in results]
-        
+
         if active and run_area_names:
             self.set_active_area_for_user(run_area.username, run_area_names[0])
 
@@ -838,7 +857,9 @@ class RunningDatabase(object):
             WHERE username = ?
                 AND area_name = ?
         """
-        results = self.execute(query, query_params=run_area_query_params, expect_data=True)
+        results = self.execute(
+            query, query_params=run_area_query_params, expect_data=True
+        )
         run_ids = {run_id for run_id, *_ in results}
 
         if run_ids:
@@ -850,4 +871,3 @@ class RunningDatabase(object):
         for table in ("run_areas", "sub_run_areas", "ignored_segments", "logged_runs"):
             query = f"DELETE FROM {table} WHERE username = ? AND area_name = ?"
             self.execute(query, query_params=run_area_query_params)
- 

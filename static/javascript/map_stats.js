@@ -35,7 +35,7 @@ const defaultMissingStyle = {
 }
 
 /** Total length in kilometres of all segments in the challenge.
- * 
+ *
  * Segments have already been ignored prior to populating `segmentData`.
  */
 function calculateTotalLengthKm() {
@@ -430,7 +430,7 @@ function buildStatsByRunTable(statsByRun) {
 }
 
 /** Calculate statistics for each run.
- * 
+ *
  * `runsByDate` should be an array where each element correponds to a single date.
  */
 function showStatsByRun(runsByDate, args) {
@@ -480,7 +480,7 @@ function rectangleIntersection(startLat, startLng, endLat, endLng) {
 }
 
 /** Get data required to calculate intersection of polygon with lines.
- * 
+ *
  * We return both the function that will perform the intersection and any arguments
  * required other than the start and end lat-lngs of the line with which we want to
  * intersect.
@@ -609,7 +609,7 @@ function showAll() {
 }
 
 /** Show all segments which have not been run (in polygon if drawn, otherwise everwhere).
- * 
+ *
  * The number of segments shown here is potentially limited by the slider in the UI.
  */
 function showMissingSegments(segmentIds) {

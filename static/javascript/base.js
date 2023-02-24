@@ -2,7 +2,7 @@ const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 var wkt;  // used to read WKT linestrings
 
 /** Update the div overlay showing current month/year for animation.
- * 
+ *
  * Date has format "YYYY-MM-DD".
  */
 function updateDateDiv(date) {
@@ -132,8 +132,8 @@ const switchRunArea = (username, areaName) => {
     })
 }
 
-/** Setup up map panes to allow easy layering of different plotting artefacts. 
- * 
+/** Setup up map panes to allow easy layering of different plotting artefacts.
+ *
  * See https://github.com/Leaflet/Leaflet/blob/v1.0.0/dist/leaflet.css#L87
 */
 const panes = {}

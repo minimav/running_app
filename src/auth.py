@@ -27,9 +27,9 @@ class OAuth2PasswordBearerCookie(OAuth2):
     def __init__(
         self,
         tokenUrl: str,
-        scheme_name: str = None,
-        scopes: dict = None,
-        auto_error: bool = True,
+        scheme_name: Optional[str] = None,
+        scopes: Optional[dict] = None,
+        auto_error: Optional[bool] = True,
     ):
         if not scopes:
             scopes = {}
@@ -71,7 +71,7 @@ class OAuth2PasswordBearerCookie(OAuth2):
 
 
 class BasicAuth(SecurityBase):
-    def __init__(self, scheme_name: str = None, auto_error: bool = True):
+    def __init__(self, scheme_name: Optional[str] = None, auto_error: bool = True):
         self.scheme_name = scheme_name or self.__class__.__name__
         self.auto_error = auto_error
 
