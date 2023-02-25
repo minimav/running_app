@@ -457,12 +457,16 @@ function formatRunsByDate(runs) {
 
 /** Get the data for a run on a particular date. */
 function getRunOnDate(date) {
+  if (runsByDate === undefined) {
+    // case where we are animating
+    return [];
+  }
   for (i = 0; i < runsByDate.length; i++) {
     if (runsByDate[i]["date"] == date) {
       return runsByDate[i]["run"];
     }
   }
-  return undefined;
+  return [];
 }
 
 /** Highlight the run on the date whose stats row has just had a mouseover event. */
@@ -1313,3 +1317,21 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
   populateSubRunAreas();
 });
+
+let animationButtonIds = ["animate-all-btn", "animate-in-date-range-btn"];
+
+/** Enable animation buttons for geometry options that allow it. */
+function enableAnimation() {
+  animationButtonIds.forEach((id) => {
+    let element = document.getElementById(id);
+    element.removeAttribute("disabled", "");
+  });
+}
+
+/** Disable animation buttons for geometry options that do not allow it. */
+function disableAnimation() {
+  animationButtonIds.forEach((id) => {
+    let element = document.getElementById(id);
+    element.setAttribute("disabled", "");
+  });
+}

@@ -34,6 +34,7 @@
         name="geometry-options"
         id="runs"
         autocomplete="off"
+        onchange="enableAnimation()"
         checked
       />Segments
     </label>
@@ -42,6 +43,7 @@
         type="radio"
         name="geometry-options"
         id="traversals"
+        onchange="disableAnimation()"
         autocomplete="off"
       /># traversals
     </label>
@@ -50,6 +52,7 @@
         type="radio"
         name="geometry-options"
         id="run_linestrings"
+        onchange="enableAnimation()"
         autocomplete="off"
       />Raw
     </label>
@@ -58,6 +61,7 @@
         type="radio"
         name="geometry-options"
         id="missing"
+        onchange="disableAnimation()"
         autocomplete="off"
       />Missing
     </label>
