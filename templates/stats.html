@@ -34,6 +34,7 @@
         name="geometry-options"
         id="runs"
         autocomplete="off"
+        onchange="enableAnimation()"
         checked
       />Segments
     </label>
@@ -42,6 +43,7 @@
         type="radio"
         name="geometry-options"
         id="traversals"
+        onchange="disableAnimation()"
         autocomplete="off"
       /># traversals
     </label>
@@ -50,6 +52,7 @@
         type="radio"
         name="geometry-options"
         id="run_linestrings"
+        onchange="enableAnimation()"
         autocomplete="off"
       />Raw
     </label>
@@ -58,6 +61,7 @@
         type="radio"
         name="geometry-options"
         id="missing"
+        onchange="disableAnimation()"
         autocomplete="off"
       />Missing
     </label>
@@ -102,7 +106,7 @@
     type="range"
     class="form-range"
     min="1"
-    max="30"
+    max="90"
     value="10"
     id="animation-speed"
   />
@@ -133,7 +137,7 @@
 <div class="form-group form-inline">
   <div class="dropdown">
     <button
-      class="btn btn-primary"
+      class="btn btn-primary btn-sm"
       type="button"
       id="area-dropdown"
       data-toggle="dropdown"
@@ -153,29 +157,48 @@
 <hr />
 
 <div class="form-group form-inline">
+  <div class="input-group-prepend">
+    <div class="input-group-text" id="date-range-btns">
+      <i class="fa fa-calendar"></i>
+    </div>
+  </div>
   <button
     type="submit"
-    class="btn btn-primary"
+    class="btn btn-primary btn-sm"
     id="show-in-date-range-btn"
     onclick="showGeometry('date-range')"
   >
-    Show in date range
+    Show
   </button>
   <button
     type="submit"
-    class="btn btn-primary"
+    class="btn btn-primary btn-sm"
+    id="animate-in-date-range-btn"
+    onclick="animateData('date-range')"
+  >
+    Animate
+  </button>
+</div>
+
+<div class="form-group form-inline">
+  <div class="input-group-prepend">
+    <div class="input-group-text" id="date-range-btns">
+      <i class="fa fa-globe"></i>
+    </div>
+  </div>
+  <button
+    type="submit"
+    class="btn btn-primary btn-sm"
     id="show-all-btn"
     onclick="showGeometry('all')"
   >
-    Show all
+    Show
   </button>
-</div>
-<div class="form-group form-inline">
   <button
     type="submit"
-    class="btn btn-primary"
-    id="animate-runs-btn"
-    onclick="animateRuns()"
+    class="btn btn-primary btn-sm"
+    id="animate-all-btn"
+    onclick="animateData('all')"
   >
     Animate
   </button>
@@ -183,7 +206,7 @@
 
 <button
   type="submit"
-  class="btn btn-danger"
+  class="btn btn-danger btn-sm"
   id="reset-btn"
   onclick="removeSegments()"
 >
@@ -192,7 +215,7 @@
 
 <button
   type="button"
-  class="btn btn-light"
+  class="btn btn-light btn-sm"
   data-toggle="modal"
   data-target="#help-modal"
 >
@@ -211,8 +234,8 @@
       <nav>
         <div class="nav nav-tabs" id="nav-tab" role="tablist">
           <a
-            class="nav-item nav-link"
-            id="nav-contact-tab"
+            class="nav-item nav-link active"
+            id="nav-stats-tab"
             data-toggle="tab"
             href="#nav-stats"
             role="tab"
@@ -221,7 +244,17 @@
             >Stats</a
           >
           <a
-            class="nav-item nav-link active"
+            class="nav-item nav-link"
+            id="nav-missing-tab"
+            data-toggle="tab"
+            href="#nav-missing-roads"
+            role="tab"
+            aria-controls="nav-missing-roads"
+            aria-selected="false"
+            >Missing roads</a
+          >
+          <a
+            class="nav-item nav-link"
             id="nav-animation-tab"
             data-toggle="tab"
             href="#nav-animation"
@@ -231,7 +264,7 @@
             >Animation</a
           >
           <a
-            class="nav-item nav-link active"
+            class="nav-item nav-link"
             id="nav-sub-areas-tab"
             data-toggle="tab"
             href="#nav-sub-areas"
@@ -244,18 +277,28 @@
 
         <div class="tab-content" id="nav-tabContent">
           <div
-            class="tab-pane fade"
+            class="tab-pane fade show active"
             id="nav-stats"
             role="tabpanel"
             aria-labelledby="nav-stats-tab"
           >
             <div class="modal-body">
               <p>
-                Runs can be selected within a date range or for all time. If a
-                polygon is drawn on the map then only segments/runs intersecting
-                the polygon will be returned. Statistics will also be calculated
-                using only segments intersecting the polygon. Statistics overall
-                and per run are displayed in the boxes to the right of the map.
+                Runs can be shown via the 'Show' buttons at the bottom of the
+                lefthand options pane, either within a date range
+                <i class="fa fa-calendar"></i> or for all dates
+                <i class="fa fa-globe"></i>.
+              </p>
+              <p>
+                The data shown can be either OSM segments or raw linestrings,
+                via the geometry options 'Segments' and 'Raw' respectively.
+                Statistics are displayed in the righthand map overlay, but are
+                currently only shown for the 'Segments' option.
+              </p>
+              <p>
+                If a polygon is drawn on the map then only segments/runs
+                intersecting the polygon will be returned. Statistics will also
+                be calculated using only segments intersecting the polygon.
               </p>
             </div>
           </div>
@@ -267,31 +310,57 @@
           >
             <div class="modal-body">
               <p>
-                Roads that have never been run can be displayed, either for the
-                whole area or in a polygon if one is drawn. No date filtering is
-                applied currently. The slider allows control over how many
-                segments are displayed. In the full area there are many
-                segments, which if displayed at once can make the map
-                unresponsive. Statistics on missing roads are displayed in the
-                top box to the right of the map.
+                By choosing the 'Missing' geometry option, roads that have not
+                yet been run can be displayed using the 'Show' buttons.
+              </p>
+              <p>
+                Runs considered in order to calculate missing segments can be
+                geographically filtered via a polygon if one is drawn (including
+                sub areas). Segments traversals can be considered from a date
+                range
+                <i class="fa fa-calendar"></i> or for all dates
+                <i class="fa fa-globe"></i>.
+              </p>
+              <p>
+                The 'Max missing segments to show' slider allows control over
+                how many segments are displayed. In the full area there may be
+                many missing segments, which if displayed all at once can make
+                the map unresponsive.
+              </p>
+
+              <p>
+                High-level statistics on missing roads are displayed in the top
+                box to the right of the map.
               </p>
             </div>
           </div>
           <div
-            class="tab-pane fade show active"
+            class="tab-pane fade"
             id="nav-animation"
             role="tabpanel"
             aria-labelledby="nav-animation-tab"
           >
             <div class="modal-body">
               <p>
-                Clicking 'Animate' will show all runs in date order, at a speed
-                determined by the slider. To stop the animation, click 'Reset'.
+                Runs can be animated via the 'Animate' buttons at the bottom of
+                the lefthand options pane. These can be in a date range
+                <i class="fa fa-calendar"></i> or all dates
+                <i class="fa fa-globe"></i>. Currently no geographic filtering
+                via drawn polygons or sub-areas is implemented.
+              </p>
+              <p>
+                The data to be animated can be either OSM segments or raw
+                linestrings, via the geometry options 'Segments' and 'Raw'
+                respectively.
+              </p>
+              <p>
+                The 'Animation speed (days/second)' slider determines the
+                animation speed. To stop the animation, click 'Reset'.
               </p>
             </div>
           </div>
           <div
-            class="tab-pane fade show active"
+            class="tab-pane fade"
             id="nav-sub-areas"
             role="tabpanel"
             aria-labelledby="nav-sub-areas-tab"
@@ -305,14 +374,14 @@
               </p>
               <p>
                 To save a shape, click on it to bring up the save dialog. A name
-                must be given from the area drawn. The shape can optionally be
+                must be given for the area drawn. The shape can optionally be
                 intersected with the run area boundary, since for stats purposes
-                outside that boundary is superfluous. Taking the intersection is
-                the default option.
+                any of the sub area outside that boundary is superfluous. Taking
+                the intersection is the default option.
               </p>
               <p>
                 Once saved, your new saved sub area will appear in the dropdown
-                'Show saved sub area'.
+                list 'Show saved sub area'.
               </p>
             </div>
           </div>

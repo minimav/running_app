@@ -355,40 +355,53 @@ function showSegmentsWithTraversals(data, remove) {
 }
 
 /** Parse date range inputs and whether to show the number of traversals or not. */
-function parseArgs() {
+function parseArgs(validateDates) {
   let startDateRaw = document.getElementById("start-date").value;
   let endDateRaw = document.getElementById("end-date").value;
 
   let startDate = new Date(startDateRaw);
   let endDate = new Date(endDateRaw);
-  if (!validateDatetime(startDate)) {
-    populateAndShowModal({
-      title: "Date error",
-      content: "Start date is invalid.",
-    });
-    return;
-  } else if (!validateDatetime(endDate)) {
-    populateAndShowModal({
-      title: "Date error",
-      content: "End date is invalid.",
-    });
-    return;
-  } else if (startDate > endDate) {
-    populateAndShowModal({
-      title: "Date error",
-      content: `End date ${endDateRaw} is prior to start date ${startDateRaw}.`,
-    });
-    return;
+
+  // only validate dates if the data to be shown is date-filtered
+  if (validateDates) {
+    if (!validateDatetime(startDate)) {
+      populateAndShowModal({
+        title: "Date error",
+        content: "Start date is invalid.",
+      });
+      return;
+    } else if (!validateDatetime(endDate)) {
+      populateAndShowModal({
+        title: "Date error",
+        content: "End date is invalid.",
+      });
+      return;
+    } else if (startDate > endDate) {
+      populateAndShowModal({
+        title: "Date error",
+        content: `End date ${endDateRaw} is prior to start date ${startDateRaw}.`,
+      });
+      return;
+    }
   }
 
   let geometryOption = document.querySelector(
     "[name=geometry-options]:checked"
   ).id;
+
+  var animationEndpoint = null;
+  if (geometryOption === "runs") {
+    animationEndpoint = "runs_for_animation";
+  } else if (geometryOption === "run_linestrings") {
+    animationEndpoint = "run_linestrings";
+  }
+
   return {
     startDate: startDateRaw,
     endDate: endDateRaw,
     geometryOption: geometryOption,
     geometryEndpoint: geometryOption === "missing" ? "runs" : geometryOption,
+    animationEndpoint: animationEndpoint,
   };
 }
 
@@ -444,12 +457,16 @@ function formatRunsByDate(runs) {
 
 /** Get the data for a run on a particular date. */
 function getRunOnDate(date) {
+  if (runsByDate === undefined) {
+    // case where we are animating
+    return [];
+  }
   for (i = 0; i < runsByDate.length; i++) {
     if (runsByDate[i]["date"] == date) {
       return runsByDate[i]["run"];
     }
   }
-  return undefined;
+  return [];
 }
 
 /** Highlight the run on the date whose stats row has just had a mouseover event. */
@@ -781,7 +798,7 @@ function getRunLinestringsToShow(url) {
 
 /** Show runs completed during the date range determined by the date inputs. */
 function showGeometry(dateFilter) {
-  const args = parseArgs();
+  const args = parseArgs(dateFilter === "date-range");
   if (args === undefined) {
     return;
   }
@@ -898,11 +915,29 @@ function showMissing(url) {
     });
 }
 
-/** Animate all runs in time order at speed determined by slider. */
-function animateRuns() {
+/** Animate specified geometry option at speed determined by slider. */
+function animateData(dateFilter) {
   removeDrawnPolygon();
   removeSegments();
-  fetch("/runs_for_animation")
+
+  const args = parseArgs(dateFilter === "date-range");
+  if (args === undefined) {
+    return;
+  }
+
+  const url =
+    dateFilter === "all"
+      ? args.animationEndpoint
+      : `${args.animationEndpoint}?start_date=${args.startDate}&end_date=${args.endDate}`;
+
+  args.geometryOption === "runs"
+    ? animateSegments(url)
+    : animateLinestrings(url);
+}
+
+/** Animate all segments in time order at speed determined by slider. */
+function animateSegments(url) {
+  fetch(url)
     .then((response) => response.json())
     .then((runsByDate) => {
       if (runsByDate.length === 0) return;
@@ -939,6 +974,43 @@ function animateRuns() {
         totalLengthKm: totalLengthKm,
       });
       showStatsByRun(runsByDate, null);
+    });
+}
+
+// Milliseconds in a day
+const msInDay = 1000 * 60 * 60 * 24;
+
+/** Animate all segments in time order at speed determined by slider. */
+function animateLinestrings(url) {
+  fetch(url)
+    .then((response) => response.json())
+    .then((runsByDate) => {
+      if (runsByDate.length === 0) return;
+
+      const daysPerSecond = parseInt(
+        document.getElementById("animation-speed").value
+      );
+      let totalDelayMs = 0;
+      let currentDate = null;
+      for (let i = 0; i < runsByDate.length; i++) {
+        let run = runsByDate[i];
+        let runDate = new Date(run.date);
+        let diffDays =
+          currentDate === null ? 0 : (runDate - currentDate) / msInDay;
+
+        const timeoutId = setTimeout(() => {
+          showRunLinestrings([run], false);
+          updateDateDiv(run.date);
+        }, totalDelayMs);
+        animationTimeouts.push(timeoutId);
+        totalDelayMs += 1000 * (diffDays / daysPerSecond);
+        currentDate = runDate;
+      }
+
+      // clean up timeout ids in case we animate again
+      setTimeout(() => {
+        animationTimeouts = [];
+      }, totalDelayMs);
     });
 }
 
@@ -1054,10 +1126,12 @@ const populateSubRunAreas = () => {
         dropdownDiv.insertAdjacentHTML(
           "beforeend",
           `<div class="dropdown-item area-dropdown-name">
-            <a onclick="${showOnClick}">
+            <a class="btn" onclick="${showOnClick}">
               ${subArea.sub_area_name}
             </a>
-            <button type="button" class="btn btn-danger btn-sm remove-sub-run-area" onclick="${removeOnClick}">x</button>
+            <a class="btn" onclick="${removeOnClick}">
+              <i class="fa fa-trash-o"></i>
+            </a>
           </div>`
         );
       });
@@ -1243,3 +1317,21 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
   populateSubRunAreas();
 });
+
+let animationButtonIds = ["animate-all-btn", "animate-in-date-range-btn"];
+
+/** Enable animation buttons for geometry options that allow it. */
+function enableAnimation() {
+  animationButtonIds.forEach((id) => {
+    let element = document.getElementById(id);
+    element.removeAttribute("disabled", "");
+  });
+}
+
+/** Disable animation buttons for geometry options that do not allow it. */
+function disableAnimation() {
+  animationButtonIds.forEach((id) => {
+    let element = document.getElementById(id);
+    element.setAttribute("disabled", "");
+  });
+}
