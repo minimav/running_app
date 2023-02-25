@@ -102,7 +102,7 @@
     type="range"
     class="form-range"
     min="1"
-    max="30"
+    max="90"
     value="10"
     id="animation-speed"
   />
@@ -153,27 +153,48 @@
 <hr />
 
 <div class="form-group form-inline">
+  <div class="input-group-prepend">
+    <div class="input-group-text" id="date-range-btns">
+      <i class="fa fa-calendar"></i>
+    </div>
+  </div>
   <button
     type="submit"
     class="btn btn-primary btn-sm"
     id="show-in-date-range-btn"
     onclick="showGeometry('date-range')"
   >
-    Show in date range
+    Show
   </button>
+  <button
+    type="submit"
+    class="btn btn-primary btn-sm"
+    id="animate-in-date-range-btn"
+    onclick="animateData('date-range')"
+  >
+    Animate
+  </button>
+</div>
+
+<div class="form-group form-inline">
+  <div class="input-group-prepend">
+    <div class="input-group-text" id="date-range-btns">
+      <i class="fa fa-globe"></i>
+    </div>
+  </div>
   <button
     type="submit"
     class="btn btn-primary btn-sm"
     id="show-all-btn"
     onclick="showGeometry('all')"
   >
-    Show all
+    Show
   </button>
   <button
     type="submit"
     class="btn btn-primary btn-sm"
-    id="animate-runs-btn"
-    onclick="animateRuns()"
+    id="animate-all-btn"
+    onclick="animateData('all')"
   >
     Animate
   </button>
