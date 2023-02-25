@@ -28,7 +28,7 @@
     class="btn-group btn-group-toggle"
     data-toggle="buttons"
   >
-    <label class="btn btn-primary active">
+    <label class="btn btn-primary btn-sm active">
       <input
         type="radio"
         name="geometry-options"
@@ -37,7 +37,7 @@
         checked
       />Segments
     </label>
-    <label class="btn btn-primary">
+    <label class="btn btn-primary btn-sm">
       <input
         type="radio"
         name="geometry-options"
@@ -45,13 +45,21 @@
         autocomplete="off"
       /># traversals
     </label>
-    <label class="btn btn-primary">
+    <label class="btn btn-primary btn-sm">
       <input
         type="radio"
         name="geometry-options"
         id="run_linestrings"
         autocomplete="off"
       />Raw
+    </label>
+    <label class="btn btn-primary btn-sm">
+      <input
+        type="radio"
+        name="geometry-options"
+        id="missing"
+        autocomplete="off"
+      />Missing
     </label>
   </div>
 </div>
@@ -166,14 +174,6 @@
   <button
     type="submit"
     class="btn btn-primary"
-    id="show-missing-btn"
-    onclick="showMissing()"
-  >
-    Show missing roads
-  </button>
-  <button
-    type="submit"
-    class="btn btn-primary"
     id="animate-runs-btn"
     onclick="animateRuns()"
   >
@@ -219,16 +219,6 @@
             aria-controls="nav-stats"
             aria-selected="true"
             >Stats</a
-          >
-          <a
-            class="nav-item nav-link"
-            id="nav-missing-roads-tab"
-            data-toggle="tab"
-            href="#nav-missing-roads"
-            role="tab"
-            aria-controls="nav-missing-roads"
-            aria-selected="false"
-            >Missing Roads</a
           >
           <a
             class="nav-item nav-link active"

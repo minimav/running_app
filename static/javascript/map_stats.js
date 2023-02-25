@@ -202,6 +202,7 @@ function refreshStatsByRunTable() {
     ],
     pageLength: 5,
     pagingType: "full",
+    columnDefs: [{ width: "35%", targets: 0 }],
   });
 }
 
@@ -380,11 +381,14 @@ function parseArgs() {
     return;
   }
 
+  let geometryOption = document.querySelector(
+    "[name=geometry-options]:checked"
+  ).id;
   return {
     startDate: startDateRaw,
     endDate: endDateRaw,
-    geometryEndpoint: document.querySelector("[name=geometry-options]:checked")
-      .id,
+    geometryOption: geometryOption,
+    geometryEndpoint: geometryOption === "missing" ? "runs" : geometryOption,
   };
 }
 
@@ -490,9 +494,9 @@ function buildStatsByRunTable(statsByRun) {
       "<td onmouseover='highlightDate(this);' onmouseout='removeHighlightDate(this);'>" +
       s.date +
       "</td>";
-    newRow += "<td>" + s.runLengthKm.toFixed(2) + "</td>";
-    newRow += "<td>" + s.firstSeenLengthKm.toFixed(2) + "</td>";
-    newRow += "<td>" + s.percNew.toFixed(2) + "%</td>";
+    newRow += "<td>" + s.runLengthKm.toFixed(1) + "</td>";
+    newRow += "<td>" + s.firstSeenLengthKm.toFixed(1) + "</td>";
+    newRow += "<td>" + s.percNew.toFixed(1) + "%</td>";
     tableBody.append(
       "<tr onmouseover='highlightRow(this);' onmouseout='removeHighlightRow(this);'>" +
         newRow +
@@ -781,6 +785,7 @@ function showGeometry(dateFilter) {
   if (args === undefined) {
     return;
   }
+
   const url =
     dateFilter === "all"
       ? args.geometryEndpoint
@@ -793,11 +798,14 @@ function showGeometry(dateFilter) {
   let overallStats = document.getElementById("overall-stats-box-data");
   let statsPerRun = document.getElementById("run-stats-box-data");
   let segmentIdSearch = document.getElementById("autocomplete-segment-ids");
-  if (args.geometryEndpoint === "runs") {
+  if (args.geometryOption === "runs") {
     overallStats.style.display = "";
     statsPerRun.style.display = "";
     segmentIdSearch.style.display = "";
-  } else if (args.geometryEndpoint === "traversals") {
+  } else if (
+    (args.geometryOption === "traversals") |
+    (args.geometryOption === "missing")
+  ) {
     overallStats.style.display = "";
     statsPerRun.style.display = "none";
     segmentIdSearch.style.display = "";
@@ -807,8 +815,10 @@ function showGeometry(dateFilter) {
     segmentIdSearch.style.display = "none";
   }
 
-  if (args.geometryEndpoint === "run_linestrings") {
+  if (args.geometryOption === "run_linestrings") {
     getRunLinestringsToShow(url);
+  } else if (args.geometryOption === "missing") {
+    showMissing(url);
   } else {
     getRunsToShow(args, url);
   }
@@ -864,8 +874,8 @@ function showMissingStats(stats) {
 }
 
 /** Show all roads that have not been run (in a polygon if drawn, otherwise everywhere). */
-function showMissing() {
-  fetch("/runs")
+function showMissing(url) {
+  fetch(url)
     .then((response) => response.json())
     .then((runs) => {
       const filteredRuns = filterRunsToPolygon(runs);
