@@ -697,7 +697,7 @@ class RunningDatabase(object):
         """Count the number of times each segment has been run in total."""
         return self.number_of_traversals_in_date_range(run_area)
 
-    def uploaded_runs_in_date_range(
+    def run_linestrings_in_date_range(
         self,
         run_area: RunArea,
         start_date: Optional[str] = None,

@@ -20,12 +20,42 @@
 <div>
   <label class="option-label">Options</label>
 </div>
-<div class="form-check form-check-inline">
-  <input class="form-check-input" type="checkbox" id="use-num-traversals" />
-  <label class="form-check-label" for="use-num-traversals"
-    >Colour by number of traversals</label
+
+<div class="form-group form-inline">
+  <label for="geometry-to-show" class="form-label">Geometry to show</label>
+  <div
+    id="geometry-to-show"
+    class="btn-group btn-group-toggle"
+    data-toggle="buttons"
   >
+    <label class="btn btn-primary active">
+      <input
+        type="radio"
+        name="geometry-options"
+        id="runs"
+        autocomplete="off"
+        checked
+      />Segments
+    </label>
+    <label class="btn btn-primary">
+      <input
+        type="radio"
+        name="geometry-options"
+        id="traversals"
+        autocomplete="off"
+      /># traversals
+    </label>
+    <label class="btn btn-primary">
+      <input
+        type="radio"
+        name="geometry-options"
+        id="run_linestrings"
+        autocomplete="off"
+      />Raw
+    </label>
+  </div>
 </div>
+
 <div class="form-group form-inline">
   <label for="min-segment-length-m-slider" class="form-label"
     >Minimum segment length (metres)</label
@@ -119,7 +149,7 @@
     type="submit"
     class="btn btn-primary"
     id="show-in-date-range-btn"
-    onclick="showInDateRange()"
+    onclick="showGeometry('date-range')"
   >
     Show in date range
   </button>
@@ -127,7 +157,7 @@
     type="submit"
     class="btn btn-primary"
     id="show-all-btn"
-    onclick="showAll()"
+    onclick="showGeometry('all')"
   >
     Show all
   </button>
@@ -232,12 +262,10 @@
             <div class="modal-body">
               <p>
                 Runs can be selected within a date range or for all time. If a
-                polygon is drawn on the map then only segments intersecting the
-                polygon will be returned. Statistics will also be calculated
+                polygon is drawn on the map then only segments/runs intersecting
+                the polygon will be returned. Statistics will also be calculated
                 using only segments intersecting the polygon. Statistics overall
                 and per run are displayed in the boxes to the right of the map.
-                These boxes can be toggled on and off using the 'Toggle stats'
-                button.
               </p>
             </div>
           </div>
@@ -256,10 +284,6 @@
                 segments, which if displayed at once can make the map
                 unresponsive. Statistics on missing roads are displayed in the
                 top box to the right of the map.
-              </p>
-              <p>
-                Both boxes can be toggled on and off using the 'Toggle stats'
-                button.
               </p>
             </div>
           </div>
@@ -358,8 +382,9 @@
             </fieldset>
           </div>
         </div>
+        <hr />
       </div>
-      <hr />
+
       {{ macros.autocomplete( "autocomplete-segment-ids", placeholder="Search
       for segment IDs", input_id="segment-id-search-input" ) }}
     </div>
