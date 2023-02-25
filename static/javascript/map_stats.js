@@ -1054,10 +1054,12 @@ const populateSubRunAreas = () => {
         dropdownDiv.insertAdjacentHTML(
           "beforeend",
           `<div class="dropdown-item area-dropdown-name">
-            <a onclick="${showOnClick}">
+            <a class="btn" onclick="${showOnClick}">
               ${subArea.sub_area_name}
             </a>
-            <button type="button" class="btn btn-danger btn-sm remove-sub-run-area" onclick="${removeOnClick}">x</button>
+            <a class="btn" onclick="${removeOnClick}">
+              <i class="fa fa-trash-o"></i>
+            </a>
           </div>`
         );
       });
