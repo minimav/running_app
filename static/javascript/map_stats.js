@@ -1,7 +1,7 @@
 let map,
   segmentData = {}, // properties of each segment
   animationTimeouts = [], // timeout ids for stopping animation
-  segmentLayer, // map layer in which segment polylines are placed
+  geometryLayer, // map layer in which segment/run geometries are placed
   ignoredSegments = new Set(), // segments which should not be considered part of the challenge
   totalLengthKm, // total length of segments
   statsByRunTable, // table displaying stats per run
@@ -202,6 +202,7 @@ function refreshStatsByRunTable() {
     ],
     pageLength: 5,
     pagingType: "full",
+    columnDefs: [{ width: "35%", targets: 0 }],
   });
 }
 
@@ -220,8 +221,8 @@ function removeSegments(removePolygon) {
   }
 
   try {
-    map.removeLayer(segmentLayer);
-    segmentLayer = undefined;
+    map.removeLayer(geometryLayer);
+    geometryLayer = undefined;
   } catch (err) {}
 
   statsByRunTable.destroy();
@@ -285,12 +286,12 @@ function showSegments(data, remove) {
       newSegments.push(segmentPolyline);
     } catch (err) {}
   });
-  if (segmentLayer === undefined) {
-    segmentLayer = L.layerGroup(newSegments);
+  if (geometryLayer === undefined) {
+    geometryLayer = L.layerGroup(newSegments);
   } else {
-    newSegments.forEach((s) => s.addTo(segmentLayer));
+    newSegments.forEach((s) => s.addTo(geometryLayer));
   }
-  segmentLayer.addTo(map);
+  geometryLayer.addTo(map);
   return {
     repeats: lengthKmOfSegments(segmentCounts),
     unique: lengthKmOfUniqueSegments(segmentCounts),
@@ -341,12 +342,12 @@ function showSegmentsWithTraversals(data, remove) {
       newSegments.push(segmentPolyline);
     } catch (err) {}
   });
-  if (segmentLayer === undefined) {
-    segmentLayer = L.layerGroup(newSegments);
+  if (geometryLayer === undefined) {
+    geometryLayer = L.layerGroup(newSegments);
   } else {
-    newSegments.forEach((s) => s.addTo(segmentLayer));
+    newSegments.forEach((s) => s.addTo(geometryLayer));
   }
-  segmentLayer.addTo(map);
+  geometryLayer.addTo(map);
   return {
     repeats: lengthKmOfSegments(segmentCounts),
     unique: lengthKmOfUniqueSegments(segmentCounts),
@@ -380,10 +381,14 @@ function parseArgs() {
     return;
   }
 
+  let geometryOption = document.querySelector(
+    "[name=geometry-options]:checked"
+  ).id;
   return {
     startDate: startDateRaw,
     endDate: endDateRaw,
-    numTraversals: document.getElementById("use-num-traversals").checked,
+    geometryOption: geometryOption,
+    geometryEndpoint: geometryOption === "missing" ? "runs" : geometryOption,
   };
 }
 
@@ -489,9 +494,9 @@ function buildStatsByRunTable(statsByRun) {
       "<td onmouseover='highlightDate(this);' onmouseout='removeHighlightDate(this);'>" +
       s.date +
       "</td>";
-    newRow += "<td>" + s.runLengthKm.toFixed(2) + "</td>";
-    newRow += "<td>" + s.firstSeenLengthKm.toFixed(2) + "</td>";
-    newRow += "<td>" + s.percNew.toFixed(2) + "%</td>";
+    newRow += "<td>" + s.runLengthKm.toFixed(1) + "</td>";
+    newRow += "<td>" + s.firstSeenLengthKm.toFixed(1) + "</td>";
+    newRow += "<td>" + s.percNew.toFixed(1) + "%</td>";
     tableBody.append(
       "<tr onmouseover='highlightRow(this);' onmouseout='removeHighlightRow(this);'>" +
         newRow +
@@ -654,6 +659,44 @@ function filterRunsToPolygon(inputRuns) {
   }
 }
 
+/** Filter run linestrings to those which intersect the currently drawn polygon (if there is one). */
+function filterLinestringsToPolygon(runLinestrings) {
+  if (currentPolygon === undefined) {
+    // no drawn polygon, use everything
+    return runLinestrings;
+  } else {
+    let polygonData = getPolygonArgs(),
+      intersectingRuns = [];
+
+    runLinestrings.forEach((r) => {
+      let coords = wkt.read(r.linestring).components;
+
+      // intersecting the linestring is expensive, so subsample the route to
+      // optimise at the risk of some false negatives/positives
+      let sampleSize = 50;
+      let retainEveryN = Math.ceil(coords.length / sampleSize);
+      let coordsSampled = sampleEveryN(coords, retainEveryN);
+
+      for (let i = 0; i < coordsSampled.length - 1; i++) {
+        // wkt parsing leads to x = lat, y = lng
+        let intersection = polygonData.intersectionFunction(
+          ...polygonData.args,
+          coords[i].x,
+          coords[i].y,
+          coords[i + 1].x,
+          coords[i + 1].y,
+          0.00000001 // tolerance in coordinate units
+        );
+        if (intersection) {
+          intersectingRuns.push(r);
+          break;
+        }
+      }
+    });
+    return intersectingRuns;
+  }
+}
+
 function getRunsToShow(args, url) {
   fetch(url)
     .then((response) => response.json())
@@ -667,7 +710,7 @@ function getRunsToShow(args, url) {
           " in the network and polygon (if drawn)."
       );
 
-      if (args.numTraversals == true) {
+      if (args.geometryEndpoint === "traversals") {
         lengthData = showSegmentsWithTraversals(runsToShow.runs, true);
       } else {
         lengthData = showSegments(runsToShow.runs, true);
@@ -679,26 +722,106 @@ function getRunsToShow(args, url) {
     });
 }
 
-/** Show runs completed during the date range determined by the date inputs. */
-function showInDateRange() {
-  const args = parseArgs();
-  if (args === undefined) {
-    return;
+/** Display segments on the map. */
+function showRunLinestrings(data, remove) {
+  if (remove) {
+    removeSegments(false);
   }
-  const endpoint = args.numTraversals == true ? "traversals" : "runs";
-  const url =
-    endpoint + "?start_date=" + args.startDate + "&end_date=" + args.endDate;
-  getRunsToShow(args, url);
+  var runs = [];
+  data.forEach((d) => {
+    try {
+      let runPolyline = new L.Polyline(
+        wkt.read(d.linestring).components.map((p) => {
+          // x=latitude, y=longitude
+          return [p.x, p.y];
+        }),
+        defaultStyle
+      );
+
+      // define mouse events
+      runPolyline.bindTooltip("Date: " + d.date);
+      runPolyline.on("mouseover", (e) => {
+        let layer = e.target;
+        layer.bringToFront();
+        layer.setStyle({
+          color: "orange",
+        });
+      });
+      runPolyline.on("mouseout", (e) => {
+        let layer = e.target;
+        layer.setStyle(defaultStyle);
+      });
+
+      runs.push(runPolyline);
+    } catch (err) {}
+  });
+  if (geometryLayer === undefined) {
+    geometryLayer = L.layerGroup(runs);
+  } else {
+    runs.forEach((s) => s.addTo(geometryLayer));
+  }
+  geometryLayer.addTo(map);
 }
 
-/** Show all runs completed (in polygon if given, otherwise everwhere). */
-function showAll() {
+function getRunLinestringsToShow(url) {
+  fetch(url)
+    .then((response) => response.json())
+    .then((runs) => {
+      let runsToShow = filterLinestringsToPolygon(runs);
+      console.log(
+        "Filtered " +
+          runs.length +
+          " rows of run data to " +
+          runsToShow.length +
+          " in the network and polygon (if drawn)."
+      );
+      showRunLinestrings(runsToShow, true);
+    });
+}
+
+/** Show runs completed during the date range determined by the date inputs. */
+function showGeometry(dateFilter) {
   const args = parseArgs();
   if (args === undefined) {
     return;
   }
-  const url = args.numTraversals == true ? "traversals" : "runs";
-  getRunsToShow(args, url);
+
+  const url =
+    dateFilter === "all"
+      ? args.geometryEndpoint
+      : args.geometryEndpoint +
+        "?start_date=" +
+        args.startDate +
+        "&end_date=" +
+        args.endDate;
+
+  let overallStats = document.getElementById("overall-stats-box-data");
+  let statsPerRun = document.getElementById("run-stats-box-data");
+  let segmentIdSearch = document.getElementById("autocomplete-segment-ids");
+  if (args.geometryOption === "runs") {
+    overallStats.style.display = "";
+    statsPerRun.style.display = "";
+    segmentIdSearch.style.display = "";
+  } else if (
+    (args.geometryOption === "traversals") |
+    (args.geometryOption === "missing")
+  ) {
+    overallStats.style.display = "";
+    statsPerRun.style.display = "none";
+    segmentIdSearch.style.display = "";
+  } else {
+    overallStats.style.display = "none";
+    statsPerRun.style.display = "none";
+    segmentIdSearch.style.display = "none";
+  }
+
+  if (args.geometryOption === "run_linestrings") {
+    getRunLinestringsToShow(url);
+  } else if (args.geometryOption === "missing") {
+    showMissing(url);
+  } else {
+    getRunsToShow(args, url);
+  }
 }
 
 /** Show all segments which have not been run (in polygon if drawn, otherwise everwhere).
@@ -722,12 +845,12 @@ function showMissingSegments(segmentIds) {
       newSegments.push(segmentPolyline);
     } catch (err) {}
   });
-  if (segmentLayer === undefined) {
-    segmentLayer = L.layerGroup(newSegments);
+  if (geometryLayer === undefined) {
+    geometryLayer = L.layerGroup(newSegments);
   } else {
-    newSegments.forEach((s) => s.addTo(segmentLayer));
+    newSegments.forEach((s) => s.addTo(geometryLayer));
   }
-  segmentLayer.addTo(map);
+  geometryLayer.addTo(map);
 }
 
 /** Display stats on how many roads have not currently been run. */
@@ -751,8 +874,8 @@ function showMissingStats(stats) {
 }
 
 /** Show all roads that have not been run (in a polygon if drawn, otherwise everywhere). */
-function showMissing() {
-  fetch("/runs")
+function showMissing(url) {
+  fetch(url)
     .then((response) => response.json())
     .then((runs) => {
       const filteredRuns = filterRunsToPolygon(runs);

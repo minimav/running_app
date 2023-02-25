@@ -686,16 +686,16 @@ async def route(
     return {"route": [segment.dict() for segment in route]}
 
 
-@app.get("/uploaded_runs")
-def uploaded_runs(
+@app.get("/run_linestrings")
+def run_linestrings(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     db: RunningDatabase = Depends(database),
     current_user: models.CurrentUser = Depends(get_current_user),
 ):
-    """Retrieve uploaded runs stored in the database in a date range."""
+    """Retrieve run linestrings stored in the database in a date range."""
     run_area = current_user.make_run_area()
-    return db.uploaded_runs_in_date_range(
+    return db.run_linestrings_in_date_range(
         run_area, start_date=start_date, end_date=end_date
     )
 
