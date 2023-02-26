@@ -341,13 +341,14 @@
                 Runs can be animated via the 'Animate' buttons at the bottom of
                 the lefthand options pane. These can be in a date range
                 <i class="fa fa-calendar"></i> or all dates
-                <i class="fa fa-globe"></i>. Currently no geographic filtering
-                via drawn polygons or sub-areas is implemented.
+                <i class="fa fa-globe"></i>.
               </p>
               <p>
                 The data to be animated can be either OSM segments or raw
                 linestrings, via the geometry options 'Segments' and 'Raw'
-                respectively.
+                respectively. If a polygon is drawn (including sub areas), then
+                only data that intersects with the polygon will be included in
+                the animation.
               </p>
               <p>
                 The 'Animation speed (days/second)' slider determines the

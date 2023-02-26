@@ -796,6 +796,34 @@ function getRunLinestringsToShow(url) {
     });
 }
 
+/** Based on geometry being shown, hide some stats boxes.
+ *
+ * Boxes that will be hidden are ones that a particular geometry type will not
+ * populate e.g. for raw linestrings currently no stats are shown, so all stats
+ * boxes are hidden.
+ */
+function hideIrrelevantStatsBoxes(geometryOption) {
+  let overallStats = document.getElementById("overall-stats-box-data");
+  let statsPerRun = document.getElementById("run-stats-box-data");
+  let segmentIdSearch = document.getElementById("autocomplete-segment-ids");
+  if (geometryOption === "runs") {
+    overallStats.style.display = "";
+    statsPerRun.style.display = "";
+    segmentIdSearch.style.display = "";
+  } else if (
+    (geometryOption === "traversals") |
+    (geometryOption === "missing")
+  ) {
+    overallStats.style.display = "";
+    statsPerRun.style.display = "none";
+    segmentIdSearch.style.display = "";
+  } else {
+    overallStats.style.display = "none";
+    statsPerRun.style.display = "none";
+    segmentIdSearch.style.display = "none";
+  }
+}
+
 /** Show runs completed during the date range determined by the date inputs. */
 function showGeometry(dateFilter) {
   const args = parseArgs(dateFilter === "date-range");
@@ -806,31 +834,9 @@ function showGeometry(dateFilter) {
   const url =
     dateFilter === "all"
       ? args.geometryEndpoint
-      : args.geometryEndpoint +
-        "?start_date=" +
-        args.startDate +
-        "&end_date=" +
-        args.endDate;
+      : `${args.geometryEndpoint}?start_date=${args.startDate}&end_date=${args.endDate}`;
 
-  let overallStats = document.getElementById("overall-stats-box-data");
-  let statsPerRun = document.getElementById("run-stats-box-data");
-  let segmentIdSearch = document.getElementById("autocomplete-segment-ids");
-  if (args.geometryOption === "runs") {
-    overallStats.style.display = "";
-    statsPerRun.style.display = "";
-    segmentIdSearch.style.display = "";
-  } else if (
-    (args.geometryOption === "traversals") |
-    (args.geometryOption === "missing")
-  ) {
-    overallStats.style.display = "";
-    statsPerRun.style.display = "none";
-    segmentIdSearch.style.display = "";
-  } else {
-    overallStats.style.display = "none";
-    statsPerRun.style.display = "none";
-    segmentIdSearch.style.display = "none";
-  }
+  hideIrrelevantStatsBoxes(args.geometryOption);
 
   if (args.geometryOption === "run_linestrings") {
     getRunLinestringsToShow(url);
@@ -917,8 +923,7 @@ function showMissing(url) {
 
 /** Animate specified geometry option at speed determined by slider. */
 function animateData(dateFilter) {
-  removeDrawnPolygon();
-  removeSegments();
+  removeSegments(false);
 
   const args = parseArgs(dateFilter === "date-range");
   if (args === undefined) {
@@ -940,6 +945,7 @@ function animateSegments(url) {
   fetch(url)
     .then((response) => response.json())
     .then((runsByDate) => {
+      // apply filtering here ?!
       if (runsByDate.length === 0) return;
 
       const daysPerSecond = parseInt(
@@ -984,16 +990,17 @@ const msInDay = 1000 * 60 * 60 * 24;
 function animateLinestrings(url) {
   fetch(url)
     .then((response) => response.json())
-    .then((runsByDate) => {
-      if (runsByDate.length === 0) return;
+    .then((runLinestrings) => {
+      runLinestrings = filterLinestringsToPolygon(runLinestrings);
+      if (runLinestrings.length === 0) return;
 
       const daysPerSecond = parseInt(
         document.getElementById("animation-speed").value
       );
       let totalDelayMs = 0;
       let currentDate = null;
-      for (let i = 0; i < runsByDate.length; i++) {
-        let run = runsByDate[i];
+      for (let i = 0; i < runLinestrings.length; i++) {
+        let run = runLinestrings[i];
         let runDate = new Date(run.date);
         let diffDays =
           currentDate === null ? 0 : (runDate - currentDate) / msInDay;

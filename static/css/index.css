@@ -7,6 +7,10 @@
   min-height: 100vh;
 }
 
+#duration {
+  width: 170px;
+}
+
 #current-distance,
 #current-speed {
   width: 80px;
@@ -77,10 +81,6 @@
   width: 300px;
 }
 
-#run-stats-box-data {
-  font-size: 12px;
-}
-
 @media (max-width: 1000px) {
   #stats-box {
     display: none;
@@ -97,9 +97,15 @@
   font-weight: bold;
 }
 
-#run-stats-box {
+#run-stats-box-data {
   font-size: x-small;
   pointer-events: initial;
+}
+
+@media (max-height: 320px) {
+  #run-stats-box-data {
+    display: none;
+  }
 }
 
 #toggle-stats-collapse {
@@ -151,6 +157,7 @@ td {
 .controls-col-expanded {
   -ms-flex: 0 0 330px;
   flex: 0 0 330px;
+  margin-bottom: 5px;
 }
 
 .controls-col-collapsed {
