@@ -275,3 +275,13 @@ function toggleSidebar() {
     sidebarButton.innerHTML = '<i class="fa fa-angle-double-right"></i>';
   }
 }
+
+/** Add specified number of days to a date.
+ *
+ * From https://stackoverflow.com/a/19691491
+ */
+function addDays(date, days) {
+  var result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
