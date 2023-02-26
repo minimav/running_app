@@ -1,8 +1,17 @@
 {% extends "base.html" %} {% block main_content %}
 <div>
   <div class="row">
-    <div class="col controls-sidebar" id="controls-col">
-      {% block controls %}{% endblock %}
+    <div class="controls-col controls-col-expanded" id="controls-col">
+      <button
+        class="btn btn-sm"
+        id="sidebar-toggle-btn"
+        onclick="toggleSidebar()"
+      >
+        <i class="fa fa-angle-double-left"></i>
+      </button>
+      <div class="col" id="controls-col-content">
+        {% block controls %}{% endblock %}
+      </div>
     </div>
     <div class="col">{% block map %}{% endblock %}</div>
   </div>

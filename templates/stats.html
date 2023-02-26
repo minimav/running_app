@@ -12,10 +12,6 @@
   rel="stylesheet"
   href="{{ url_for('static', path='/css/autocomplete.css') }}"
 />
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-/>
 {% endblock %} {% block controls %}
 <div>
   <label class="option-label">Options</label>
@@ -219,7 +215,7 @@
   data-toggle="modal"
   data-target="#help-modal"
 >
-  Help
+  <i class="fa fa-question-circle-o"></i>
 </button>
 
 <div
@@ -444,8 +440,8 @@
         <hr />
       </div>
 
-      {{ macros.autocomplete( "autocomplete-segment-ids", placeholder="Search
-      for segment IDs", input_id="segment-id-search-input" ) }}
+      {{ macros.autocomplete("autocomplete-segment-ids",
+      input_id="segment-id-search-input") }}
     </div>
   </div>
 </div>

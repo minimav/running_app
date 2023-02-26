@@ -255,3 +255,23 @@ function sampleEveryN(arr, n) {
   }
   return newArr;
 }
+
+/** Toggle whether the options sidebar is shown */
+function toggleSidebar() {
+  let sidebar = document.getElementById("controls-col");
+  let sidebarContent = document.getElementById("controls-col-content");
+  let sidebarButton = document.getElementById("sidebar-toggle-btn");
+  if (sidebarContent.style.display === "none") {
+    // expand the sidebar
+    sidebar.classList.remove("controls-col-collapsed");
+    sidebar.classList.add("controls-col-expanded");
+    sidebarContent.style.display = "";
+    sidebarButton.innerHTML = '<i class="fa fa-angle-double-left"></i>';
+  } else {
+    // collapse the sidebar
+    sidebar.classList.remove("controls-col-expanded");
+    sidebar.classList.add("controls-col-collapsed");
+    sidebarContent.style.display = "none";
+    sidebarButton.innerHTML = '<i class="fa fa-angle-double-right"></i>';
+  }
+}
