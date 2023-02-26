@@ -963,6 +963,8 @@ function animateSegments(url) {
         document.getElementById("animation-speed").value
       );
       let totalDelayMs = 0;
+
+      // define run timeouts
       const segmentCounts = {};
       filteredRunsByDate.forEach((d) => {
         d.segments.forEach((s) => {
@@ -974,11 +976,15 @@ function animateSegments(url) {
         });
         const timeoutId = setTimeout(() => {
           showSegments(d.segments, false);
-          updateDateDiv(d.date);
         }, totalDelayMs);
         animationTimeouts.push(timeoutId);
         totalDelayMs += 1000 * (d.diff_days / daysPerSecond);
       });
+
+      // define date update timeouts
+      const startDate = new Date(filteredRunsByDate[0].date);
+      const endDate = new Date(last(filteredRunsByDate).date);
+      createAnimationDateTimeouts(startDate, endDate, daysPerSecond);
 
       // clean up timeout ids in case we animate again
       setTimeout(() => {
@@ -1008,6 +1014,8 @@ function animateLinestrings(url) {
       const daysPerSecond = parseInt(
         document.getElementById("animation-speed").value
       );
+
+      // define run linestring timeouts
       let totalDelayMs = 0;
       let currentDate = null;
       for (let i = 0; i < runLinestrings.length; i++) {
@@ -1018,12 +1026,16 @@ function animateLinestrings(url) {
 
         const timeoutId = setTimeout(() => {
           showRunLinestrings([run], false);
-          updateDateDiv(run.date);
         }, totalDelayMs);
         animationTimeouts.push(timeoutId);
         totalDelayMs += 1000 * (diffDays / daysPerSecond);
         currentDate = runDate;
       }
+
+      // define date update timeouts
+      const startDate = new Date(runLinestrings[0].date);
+      const endDate = new Date(last(runLinestrings).date);
+      createAnimationDateTimeouts(startDate, endDate, daysPerSecond);
 
       // clean up timeout ids in case we animate again
       setTimeout(() => {
@@ -1352,4 +1364,24 @@ function disableAnimation() {
     let element = document.getElementById(id);
     element.setAttribute("disabled", "");
   });
+}
+
+/** Create timeouts for current date displayed during animation. */
+function createAnimationDateTimeouts(startDate, endDate, daysPerSecond) {
+  var date = new Date(startDate);
+  var previousDateStr = "2000-01-01";
+  while (date < endDate) {
+    date = addDays(date, 1);
+    const dateStr = date.toISOString().split("T")[0];
+    if (dateStr.slice(0, 7) === previousDateStr.slice(0, 7)) {
+      // no need to update for same month
+      continue;
+    }
+    const diffDays = (date - startDate) / msInDay;
+    const timeoutId = setTimeout(() => {
+      updateDateDiv(dateStr);
+    }, (1000 * diffDays) / daysPerSecond);
+    animationTimeouts.push(timeoutId);
+    previousDateStr = dateStr;
+  }
 }
