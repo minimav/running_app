@@ -364,29 +364,29 @@ def runs_for_animation(
 
     runs_by_date = []
     current_date = None
-    current_run = []
+    current_segments = []
     for traversal in traversals:
         if current_date is None:
             current_date = traversal["date"]
-            current_run.append(traversal)
+            current_segments.append(traversal)
         elif current_date == traversal["date"]:
-            current_run.append(traversal)
+            current_segments.append(traversal)
         else:
             runs_by_date.append(
                 {
                     "date": current_date,
                     "diff_days": diff_in_days(current_date, traversal["date"]),
-                    "run": current_run,
+                    "segments": current_segments,
                 }
             )
             current_date = traversal["date"]
-            current_run = [traversal]
+            current_segments = [traversal]
 
     runs_by_date.append(
         {
             "date": current_date,
             "diff_days": 0,  # nothing to wait for after last run
-            "run": current_run,
+            "segments": current_segments,
         }
     )
     return runs_by_date

@@ -5,7 +5,7 @@ let map,
   ignoredSegments = new Set(), // segments which should not be considered part of the challenge
   totalLengthKm, // total length of segments
   statsByRunTable, // table displaying stats per run
-  runsByDate, // mapping from date to segments run on that date
+  segmentsByDate, // mapping from date to segments run on that date
   segmentPolylinesById, // mapping from segment id to polyline on map
   drawingLayer, // layer containing polygon drawn by user
   currentPolygon, // the currently drawn polygon
@@ -427,43 +427,43 @@ function showOverallStats(lengthData) {
 }
 
 /** Group segments by date to facilitate calculating stats by date. */
-function formatRunsByDate(runs) {
-  if (runs.length === 0) return [];
+function formatRunsByDate(segments) {
+  if (segments.length === 0) return [];
 
   let currentDate,
-    currentRun = [],
-    runsByDate = [];
-  runs.forEach((run) => {
+    currentSegments = [],
+    segmentsByDate = [];
+  segments.forEach((s) => {
     if (currentDate === undefined) {
-      currentDate = run.date;
-      currentRun.push(run);
-    } else if (currentDate !== run.date) {
-      runsByDate.push({
+      currentDate = s.date;
+      currentSegments.push(s);
+    } else if (currentDate !== s.date) {
+      segmentsByDate.push({
         date: currentDate,
-        run: currentRun,
+        segments: currentSegments,
       });
-      currentDate = run.date;
-      currentRun = [run];
+      currentDate = s.date;
+      currentSegments = [s];
     } else {
-      currentRun.push(run);
+      currentSegments.push(s);
     }
   });
-  runsByDate.push({
+  segmentsByDate.push({
     date: currentDate,
-    run: currentRun,
+    segments: currentSegments,
   });
-  return runsByDate;
+  return segmentsByDate;
 }
 
-/** Get the data for a run on a particular date. */
-function getRunOnDate(date) {
-  if (runsByDate === undefined) {
+/** Get the data for segments run on a particular date. */
+function getSegmentsOnDate(date) {
+  if (segmentsByDate === undefined) {
     // case where we are animating
     return [];
   }
-  for (i = 0; i < runsByDate.length; i++) {
-    if (runsByDate[i]["date"] == date) {
-      return runsByDate[i]["run"];
+  for (i = 0; i < segmentsByDate.length; i++) {
+    if (segmentsByDate[i]["date"] == date) {
+      return segmentsByDate[i]["segments"];
     }
   }
   return [];
@@ -472,7 +472,7 @@ function getRunOnDate(date) {
 /** Highlight the run on the date whose stats row has just had a mouseover event. */
 function highlightDate(cell) {
   const date = cell.innerHTML;
-  const runOnDate = getRunOnDate(date);
+  const runOnDate = getSegmentsOnDate(date);
   runOnDate.forEach((traversal) => {
     let segmentPolyline = segmentPolylinesById[traversal.segment_id];
     segmentPolyline.bringToFront();
@@ -485,7 +485,7 @@ function highlightDate(cell) {
 /** Remove the highlight on the run on the date whose row has just had a mouseout event. */
 function removeHighlightDate(cell) {
   const date = cell.innerHTML;
-  const runOnDate = getRunOnDate(date);
+  const runOnDate = getSegmentsOnDate(date);
   runOnDate.forEach((traversal) => {
     let segmentPolyline = segmentPolylinesById[traversal.segment_id];
     segmentPolyline.setStyle(defaultStyle);
@@ -525,9 +525,9 @@ function buildStatsByRunTable(statsByRun) {
 
 /** Calculate statistics for each run.
  *
- * `runsByDate` should be an array where each element correponds to a single date.
+ * `segmentsByDate` should be an array where each element correponds to a single date.
  */
-function showStatsByRun(runsByDate, args) {
+function showStatsByRun(segmentsByDate, args) {
   let statsByRun = [];
   var endpoint = "/first_seen";
   if (args !== null) {
@@ -536,10 +536,10 @@ function showStatsByRun(runsByDate, args) {
   fetch(endpoint)
     .then((response) => response.json())
     .then((firstSeen) => {
-      runsByDate.forEach((runOnDate) => {
+      segmentsByDate.forEach((runOnDate) => {
         let firstSeenOnDate =
           runOnDate.date in firstSeen ? firstSeen[runOnDate.date] : [];
-        let allSegmentsOnDate = runOnDate.run.map((t) => t.segment_id);
+        let allSegmentsOnDate = runOnDate.segments.map((t) => t.segment_id);
         let firstSeenLengthKm = lengthKmOfSegmentsById(firstSeenOnDate);
         let runLengthKm = lengthKmOfSegmentsById(allSegmentsOnDate);
         statsByRun.push({
@@ -621,15 +621,17 @@ function getPolygonArgs() {
 }
 
 /** Filter run data to only those segments that intersect the currently drawn polygon (if there is one). */
-function filterRunsToPolygon(inputRuns) {
+function filterSegmentsToPolygon(inputSegments) {
   // first filter to segments which are included in the network according to current options
-  let runs = inputRuns.filter((r) => segmentData[r.segment_id] !== undefined);
+  let segments = inputSegments.filter(
+    (r) => segmentData[r.segment_id] !== undefined
+  );
   let uniqueSegmentIds = new Set();
-  runs.forEach((r) => uniqueSegmentIds.add(r.segment_id));
+  segments.forEach((s) => uniqueSegmentIds.add(s.segment_id));
   if (currentPolygon === undefined) {
     // no drawn polygon, use all segments
     return {
-      runs: runs,
+      segments: segments,
       totalLengthKm: totalLengthKm,
       missingSegmentIds: Object.keys(segmentData).filter(
         (segmentId) => !uniqueSegmentIds.has(segmentId)
@@ -664,11 +666,11 @@ function filterRunsToPolygon(inputRuns) {
         intersectionLengthMetres += segment["properties"]["length_m"];
       }
     }
-    let filteredRuns = runs.filter((r) =>
-      intersectionSegmentIds.has(r.segment_id)
+    let filteredSegments = segments.filter((s) =>
+      intersectionSegmentIds.has(s.segment_id)
     );
     return {
-      runs: filteredRuns,
+      segments: filteredSegments,
       totalLengthKm: intersectionLengthMetres / 1000,
       missingSegmentIds: missingSegmentIds,
       numSegmentsInIntersection: numSegmentsInIntersection,
@@ -717,24 +719,24 @@ function filterLinestringsToPolygon(runLinestrings) {
 function getRunsToShow(args, url) {
   fetch(url)
     .then((response) => response.json())
-    .then((runs) => {
-      let runsToShow = filterRunsToPolygon(runs);
+    .then((segments) => {
+      let segmentsToShow = filterSegmentsToPolygon(segments);
       console.log(
         "Filtered " +
-          runs.length +
+          segments.length +
           " rows of run data to " +
-          runsToShow.runs.length +
+          segmentsToShow.segments.length +
           " in the network and polygon (if drawn)."
       );
 
       if (args.geometryEndpoint === "traversals") {
-        lengthData = showSegmentsWithTraversals(runsToShow.runs, true);
+        lengthData = showSegmentsWithTraversals(segmentsToShow.segments, true);
       } else {
-        lengthData = showSegments(runsToShow.runs, true);
-        runsByDate = formatRunsByDate(runsToShow.runs);
-        showStatsByRun(runsByDate, args);
+        lengthData = showSegments(segmentsToShow.segments, true);
+        segmentsByDate = formatRunsByDate(segmentsToShow.segments);
+        showStatsByRun(segmentsByDate, args);
       }
-      lengthData.totalLengthKm = runsToShow.totalLengthKm;
+      lengthData.totalLengthKm = segmentsToShow.totalLengthKm;
       showOverallStats(lengthData);
     });
 }
@@ -900,9 +902,9 @@ function showMissingStats(stats) {
 function showMissing(url) {
   fetch(url)
     .then((response) => response.json())
-    .then((runs) => {
-      const filteredRuns = filterRunsToPolygon(runs);
-      let missingSegmentIds = filteredRuns.missingSegmentIds;
+    .then((segments) => {
+      const filteredSegments = filterSegmentsToPolygon(segments);
+      let missingSegmentIds = filteredSegments.missingSegmentIds;
       const numMissingSegments = missingSegmentIds.length;
       const totalMissingLengthKm = lengthKmOfSegmentsById(missingSegmentIds);
       const maxMissingToShow = parseInt(
@@ -913,10 +915,10 @@ function showMissing(url) {
       }
       showMissingSegments(missingSegmentIds);
       showMissingStats({
-        totalLengthKm: filteredRuns.totalLengthKm,
+        totalLengthKm: filteredSegments.totalLengthKm,
         totalMissingLengthKm: totalMissingLengthKm,
         numMissing: numMissingSegments,
-        totalNumSegments: filteredRuns.numSegmentsInIntersection,
+        totalNumSegments: filteredSegments.numSegmentsInIntersection,
       });
     });
 }
@@ -944,17 +946,26 @@ function animateData(dateFilter) {
 function animateSegments(url) {
   fetch(url)
     .then((response) => response.json())
-    .then((runsByDate) => {
-      // apply filtering here ?!
-      if (runsByDate.length === 0) return;
+    .then((segmentsToAnimateByDate) => {
+      let filteredRunsByDate = [];
+      segmentsToAnimateByDate.forEach((s) => {
+        let polygonFilteredSegments = filterSegmentsToPolygon(s.segments);
+        if (polygonFilteredSegments.segments.length > 0) {
+          filteredRunsByDate.push({
+            ...s,
+            ...polygonFilteredSegments,
+          });
+        }
+      });
+      if (filteredRunsByDate.length === 0) return;
 
       const daysPerSecond = parseInt(
         document.getElementById("animation-speed").value
       );
       let totalDelayMs = 0;
       const segmentCounts = {};
-      runsByDate.forEach((d) => {
-        d.run.forEach((s) => {
+      filteredRunsByDate.forEach((d) => {
+        d.segments.forEach((s) => {
           if (segmentCounts[s.segment_id] === undefined) {
             segmentCounts[s.segment_id] = 1;
           } else {
@@ -962,7 +973,7 @@ function animateSegments(url) {
           }
         });
         const timeoutId = setTimeout(() => {
-          showSegments(d.run, false);
+          showSegments(d.segments, false);
           updateDateDiv(d.date);
         }, totalDelayMs);
         animationTimeouts.push(timeoutId);
@@ -979,7 +990,7 @@ function animateSegments(url) {
         repeats: lengthKmOfSegments(segmentCounts),
         totalLengthKm: totalLengthKm,
       });
-      showStatsByRun(runsByDate, null);
+      showStatsByRun(filteredRunsByDate, null);
     });
 }
 
