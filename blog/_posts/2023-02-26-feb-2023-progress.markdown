@@ -1,0 +1,58 @@
+---
+layout: post
+title:  "February 2023 progress"
+date:   2023-02-26 15:00:00 +0000
+categories: update
+---
+
+I haven't made much progress over the last few months. In part this was due to getting Covid in August 2022, which meant that I didn't do as much running during Autumn and Winter. But even when fit, it now takes a while to get anywhere with new roads, even with public transport! Nevertheless, I had a couple of weeks off work this month that enabled me to go on some long runs, and that gave me more motivation to continue as part of regular weekly long runs.
+
+I've slowly been expanding eastwards into Levenshulme, and this was the area that I focused on during these runs. One reason for this is that the [Fallowfield Loop](https://fallowfieldloop.org/) bike path goes from Chorlton, where I'm based, directly east for several miles before turning north and ending up in Fairfield in East Manchester. It's a great way to cover distance to new roads without having to deal with cars.
+
+**Progress this month: 40.71% -> 41.84%**
+
+I made some changes to the stats page as well, including changing the colour gradient when plotting the number of traversals per segment. This distribution is very skewed towards most segments only having one traversal, thus defining the colour gradient is not straightforward. After a bit of fiddling about I got the following output:
+
+| ![# traversals per segment]({{ site.baseurl }}/assets/images/feb-2023-progress/colour-gradient.png) |
+|:--:|
+| *New colour gradient for plotting the number of traversals per segment.* |
+
+### Run 1 - 2023-02-06
+
+For my first run, on 6th February, I used the Fallowfield Loop both at the start and end of my run. This covered ~8 miles, leaving about 40 minutes of pootling about around Levenshulme in which to add new roads. I did a minor bit of non-challenge distance aside from the Fallowfield Loop via a short stretch through Cringle Park.
+
+| ![Run on 2023-02-06]({{ site.baseurl }}/assets/images/feb-2023-progress/2023-02-06.png) |
+|:--:|
+| *2023-02-06 run added 4.11km of new road, 40.88% total completion. Start and end on Fallowfield Loop not shown.* |
+
+One of the best parts of running in this area is the huge McVities factory alongside Wellington Road North (A6). There are some lovely biscuity smells to enjoy on certain roads in the vicinity of the factory.
+
+### Run 2 - 2023-02-14
+
+For the next run, on 14th February, I again used the Fallowfield Loop at the start of the run, but ran south at the end to East Didsbury tram stop. Doing this meant I could spend more of the run doing new roads rather than getting to and from home. East Didsbury tram stop is probably the 'best' remaining tram stop available to me in terms of minimising travel distance, while still being relatively close to new roads.
+
+| ![Run on 2023-02-14]({{ site.baseurl }}/assets/images/feb-2023-progress/2023-02-14.png) |
+|:--:|
+| *2023-02-14 run added 6.55km of new road, 41.15% total completion. Start on Fallowfield Loop and end at East Didsbury tram stop not shown.* |
+
+I did some interesting radial roads in this runs, as well as seeing a well-endowed sex toy in the middle of one street...
+
+### Run 3 - 2023-02-19
+
+Trying to get long runs back to weekends after my time off work, only a few days later I did another long run, this time into Reddish. I ran slightly further along the Fallowfield Loop before exiting it, into a part of Manchester that I barely know at all.
+
+| ![Run on 2023-02-19]({{ site.baseurl }}/assets/images/feb-2023-progress/2023-02-19.png) |
+|:--:|
+| *2023-02-19 run added 5.35km of new road, 41.37% total completion. Start and end on Fallowfield Loop not shown.* |
+
+I got more biscuity smells on this run, albeit briefly. Also some nice old mill buildings in Reddish.
+
+### Run 4 - 2023-02-26
+
+For this run I completed a small collection of roads just east of the main road in Levenshulme, then did some long straight running in Gorton and Reddish, including going up to the eastern section of the M60. This type of run is quite useful to do when running in a new area that is unknown to me, as it gives me a 'lie of the land' that helps for more intricate future navigation.
+
+| ![Run on 2023-02-26]({{ site.baseurl }}/assets/images/feb-2023-progress/2023-02-26.png) |
+|:--:|
+| *2023-02-26 run added 11.4km of new road, 41.84% total completion. Start on Fallowfield Loop not shown.* |
+
+Once again I started along the Fallowfield Loop (warm-up?!) and finished at East Didsbury tram stop. The total run distance was just over 16 miles.

@@ -27,3 +27,6 @@ freeze:
 
 blog:
 	cd blog; bundle exec jekyll serve --trace
+
+blog-drafts:
+	cd blog; bundle exec jekyll serve --trace --drafts

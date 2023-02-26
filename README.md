@@ -35,6 +35,8 @@ And here's another more recent (August 2022) picture:
 
 ![Recent progress](static/images/stats_tab_updated.png)
 
+For more details you can see the accompanying blog [here](https://minimav.github.io/running_app/).
+
 ## Technical notes
 
 OSM data is retrieved using the [osmnx](https://github.com/gboeing/osmnx) Python package. Routing and map matching is done using that data, which is stored in a SQLite database. A more scalable solution to support lots of users might be to load OSM data on the fly and use something like [OSRM](http://project-osrm.org/) for routing. How to deal with OSM segment updates is another question though, ditto supporting specifying segments in a challenge.
