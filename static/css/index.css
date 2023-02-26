@@ -4,7 +4,11 @@
   border-radius: 8px;
   width: 100%;
   height: 100%;
-  min-height: 80vh;
+  min-height: 100vh;
+}
+
+#duration {
+  width: 170px;
 }
 
 #current-distance,
@@ -77,10 +81,6 @@
   width: 300px;
 }
 
-#run-stats-box-data {
-  font-size: 12px;
-}
-
 @media (max-width: 1000px) {
   #stats-box {
     display: none;
@@ -97,9 +97,15 @@
   font-weight: bold;
 }
 
-#run-stats-box {
+#run-stats-box-data {
   font-size: x-small;
   pointer-events: initial;
+}
+
+@media (max-height: 320px) {
+  #run-stats-box-data {
+    display: none;
+  }
 }
 
 #toggle-stats-collapse {
@@ -113,7 +119,7 @@
 }
 
 #segment-id-search-input {
-  width: 215px;
+  width: 200px;
 }
 
 .dataTables_wrapper .dataTables_filter input {
@@ -148,15 +154,29 @@ td {
   font-weight: bold;
 }
 
-.controls-sidebar {
+.controls-col-expanded {
   -ms-flex: 0 0 330px;
   flex: 0 0 330px;
+  margin-bottom: 5px;
+}
+
+.controls-col-collapsed {
+  -ms-flex: 0 0 20px;
+  flex: 0 0 20px;
 }
 
 @media (max-width: 690px) {
-  .controls-sidebar {
+  .controls-col {
     display: none;
   }
+}
+
+#sidebar-toggle-btn {
+  float: right;
+  margin-left: auto;
+  margin-right: 0;
+  z-index: 10;
+  position: relative;
 }
 
 #run-area-name,

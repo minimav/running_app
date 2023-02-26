@@ -176,53 +176,52 @@
   </div>
 </div>
 
-<button type="submit" class="btn btn-primary" id="submit" disabled>
-  Submit
-</button>
-<button
-  type="submit"
-  class="btn btn-primary"
-  id="undo"
-  onclick="undo()"
-  disabled
->
-  Undo
-</button>
-<button
-  type="submit"
-  class="btn btn-primary"
-  id="redo"
-  onclick="redo()"
-  disabled
->
-  Redo
-</button>
-<button
-  type="submit"
-  class="btn btn-danger"
-  id="reset"
-  onclick="reset()"
-  disabled
->
-  Reset
-</button>
-
 <div class="row">
+  <button type="submit" class="btn btn-primary btn-sm" id="submit" disabled>
+    Submit
+  </button>
+  <button
+    type="submit"
+    class="btn btn-primary btn-sm"
+    id="undo"
+    onclick="undo()"
+    disabled
+  >
+    <i class="fa fa-undo"></i>
+  </button>
+  <button
+    type="submit"
+    class="btn btn-primary btn-sm"
+    id="redo"
+    onclick="redo()"
+    disabled
+  >
+    <i class="fa fa-repeat"></i>
+  </button>
+  <button
+    type="submit"
+    class="btn btn-danger btn-sm"
+    id="reset"
+    onclick="reset()"
+    disabled
+  >
+    Reset
+  </button>
   <button
     type="button"
-    class="btn btn-default"
+    class="btn btn-default btn-sm"
     data-toggle="modal"
     data-target="#helpModal"
   >
-    Help
+    <i class="fa fa-question-circle-o"></i>
   </button>
 </div>
 {% endblock %} {% block map %}
 <div class="mapbox">
   <div id="map"></div>
   <div id="segment-search-box" class="row-fluid right-overlay stats-box">
-    {{ macros.autocomplete( "autocomplete-segment-ids", placeholder="Search for
-    segment IDs", input_id="segment-id-search-input" ) }}
+    {{ macros.autocomplete( "autocomplete-segment-ids",
+    input_id="segment-id-search-input") }}
   </div>
 </div>
 {% endblock %} {% block scripts %} {{ super() }}

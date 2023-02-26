@@ -49,24 +49,29 @@
   </div>
 </div>
 
-<button type="submit" class="btn btn-primary" id="submit">Submit</button>
-<button type="submit" class="btn btn-danger" id="reset" onclick="reset()">
+<button type="submit" class="btn btn-primary btn-sm" id="submit">Submit</button>
+<button
+  type="submit"
+  class="btn btn-danger btn-sm"
+  id="reset"
+  onclick="reset()"
+>
   Reset
 </button>
 <button
   type="button"
-  class="btn btn-default"
+  class="btn btn-default btn-sm"
   data-toggle="modal"
   data-target="#helpModal"
 >
-  Help
+  <i class="fa fa-question-circle-o"></i>
 </button>
 {% endblock %} {% block map %}
 <div class="mapbox">
   <div id="map"></div>
   <div id="segment-search-box" class="row-fluid right-overlay stats-box">
-    {{ macros.autocomplete( "autocomplete-segment-ids", placeholder="Search for
-    segment IDs", input_id="segment-id-search-input" ) }}
+    {{ macros.autocomplete("autocomplete-segment-ids",
+    input_id="segment-id-search-input" ) }}
   </div>
 </div>
 {% endblock %} {% block scripts %} {{ super() }}
