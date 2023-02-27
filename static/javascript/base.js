@@ -18,16 +18,19 @@ var wkt; // used to read WKT linestrings
  *
  * Date has format "YYYY-MM-DD".
  */
-function updateDateDiv(date) {
+function updateDateDiv(dateStr, numDays) {
   // make visible...
   let dateBox = document.getElementById("animation-date");
   dateBox.style.opacity = "1";
-  // ...and if month has changed, update
-  let monthYear =
-    months[parseInt(date.slice(5, 7)) - 1] + " " + date.slice(0, 4);
-  if (dateBox.innerHTML !== monthYear) {
-    dateBox.innerHTML = "<b>" + monthYear + "</b>";
-  }
+  // move slider
+  document.getElementById("animation-date-slider").value = numDays;
+  document.getElementById("animation-date-slider-current-date").innerHTML =
+    dateStr;
+}
+
+/** Given a date, get YYYY-MM-DD string representation. */
+function formatDateStr(date) {
+  return date.toISOString().split("T")[0];
 }
 
 /** Add onchange events to update slider value tags */

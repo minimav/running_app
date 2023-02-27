@@ -206,12 +206,24 @@ function refreshStatsByRunTable() {
   });
 }
 
+/** Re-enable animation buttons if geometry option supports animation. */
+function resetAnimationButtons() {
+  let geometryOption = document.querySelector(
+    "[name=geometry-options]:checked"
+  ).id;
+  if (geometryOption === "runs" || geometryOption === "run_linestrings") {
+    document.getElementById("animate-all-btn").disabled = false;
+    document.getElementById("animate-in-date-range-btn").disabled = false;
+  }
+}
+
 /** Remove currently displayed segments and associated stats. */
 function removeSegments(removePolygon) {
   animationTimeouts.forEach((id) => {
     clearTimeout(id);
   });
   animationTimeouts = [];
+  resetAnimationButtons();
 
   document.getElementById("animation-date").style.opacity = "0";
   segmentPolylinesById = {};
@@ -932,6 +944,9 @@ function animateData(dateFilter) {
     return;
   }
 
+  document.getElementById("animate-all-btn").disabled = true;
+  document.getElementById("animate-in-date-range-btn").disabled = true;
+
   const url =
     dateFilter === "all"
       ? args.animationEndpoint
@@ -957,7 +972,10 @@ function animateSegments(url) {
           });
         }
       });
-      if (filteredRunsByDate.length === 0) return;
+      if (filteredRunsByDate.length === 0) {
+        resetAnimationButtons();
+        return;
+      }
 
       const daysPerSecond = parseInt(
         document.getElementById("animation-speed").value
@@ -988,6 +1006,7 @@ function animateSegments(url) {
 
       // clean up timeout ids in case we animate again
       setTimeout(() => {
+        resetAnimationButtons();
         animationTimeouts = [];
       }, totalDelayMs);
 
@@ -1009,7 +1028,10 @@ function animateLinestrings(url) {
     .then((response) => response.json())
     .then((runLinestrings) => {
       runLinestrings = filterLinestringsToPolygon(runLinestrings);
-      if (runLinestrings.length === 0) return;
+      if (runLinestrings.length === 0) {
+        resetAnimationButtons();
+        return;
+      }
 
       const daysPerSecond = parseInt(
         document.getElementById("animation-speed").value
@@ -1039,6 +1061,7 @@ function animateLinestrings(url) {
 
       // clean up timeout ids in case we animate again
       setTimeout(() => {
+        resetAnimationButtons();
         animationTimeouts = [];
       }, totalDelayMs);
     });
@@ -1370,16 +1393,22 @@ function disableAnimation() {
 function createAnimationDateTimeouts(startDate, endDate, daysPerSecond) {
   var date = new Date(startDate);
   var previousDateStr = "2000-01-01";
+
+  // define slider start and end times
+  let slider = document.getElementById("animation-date-slider");
+  slider.min = 0;
+  slider.max = Math.ceil((endDate - startDate) / msInDay);
+  document.getElementById("animation-date-slider-min").innerHTML =
+    formatDateStr(startDate);
+  document.getElementById("animation-date-slider-max").innerHTML =
+    formatDateStr(endDate);
+
   while (date < endDate) {
     date = addDays(date, 1);
-    const dateStr = date.toISOString().split("T")[0];
-    if (dateStr.slice(0, 7) === previousDateStr.slice(0, 7)) {
-      // no need to update for same month
-      continue;
-    }
+    const dateStr = formatDateStr(date);
     const diffDays = (date - startDate) / msInDay;
     const timeoutId = setTimeout(() => {
-      updateDateDiv(dateStr);
+      updateDateDiv(dateStr, diffDays);
     }, (1000 * diffDays) / daysPerSecond);
     animationTimeouts.push(timeoutId);
     previousDateStr = dateStr;

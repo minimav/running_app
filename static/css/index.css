@@ -68,7 +68,19 @@
 #animation-date {
   opacity: 0;
   bottom: 20px;
-  width: 100px;
+}
+
+#animation-date-slider {
+  vertical-align: middle;
+}
+
+.animation-date-slider-bound {
+  font-size: small;
+}
+
+#animation-date-slider-current-date {
+  display: table;
+  margin: 0 auto;
 }
 
 #segment-search-box {
