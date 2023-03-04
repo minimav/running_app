@@ -174,11 +174,26 @@
   >
     Animate
   </button>
+  <button
+    type="submit"
+    class="btn btn-success btn-sm animation-control-btn"
+    id="play-animate-in-date-range-btn"
+  >
+    <i class="fa fa-play"></i>
+  </button>
+  <button
+    type="submit"
+    class="btn btn-secondary btn-sm animation-control-btn"
+    id="pause-animate-in-date-range-btn"
+    onclick="pauseAnimation('date-range')"
+  >
+    <i class="fa fa-pause"></i>
+  </button>
 </div>
 
 <div class="form-group form-inline">
   <div class="input-group-prepend">
-    <div class="input-group-text" id="date-range-btns">
+    <div class="input-group-text" id="all-btns">
       <i class="fa fa-globe"></i>
     </div>
   </div>
@@ -197,6 +212,21 @@
     onclick="animateData('all')"
   >
     Animate
+  </button>
+  <button
+    type="submit"
+    class="btn btn-success btn-sm animation-control-btn"
+    id="play-animate-all-btn"
+  >
+    <i class="fa fa-play"></i>
+  </button>
+  <button
+    type="submit"
+    class="btn btn-secondary btn-sm animation-control-btn"
+    id="pause-animate-all-btn"
+    onclick="pauseAnimation('all')"
+  >
+    <i class="fa fa-pause"></i>
   </button>
 </div>
 

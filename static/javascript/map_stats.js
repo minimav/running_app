@@ -215,6 +215,15 @@ function resetAnimationButtons() {
     document.getElementById("animate-all-btn").disabled = false;
     document.getElementById("animate-in-date-range-btn").disabled = false;
   }
+  const animationControlButtonIds = [
+    "play-animate-all-btn",
+    "pause-animate-all-btn",
+    "play-animate-in-date-range-btn",
+    "pause-animate-in-date-range-btn",
+  ];
+  animationControlButtonIds.forEach((id) => {
+    document.getElementById(id).style.display = "none";
+  });
 }
 
 /** Remove currently displayed segments and associated stats. */
@@ -947,10 +956,16 @@ function animateData(dateFilter) {
   document.getElementById("animate-all-btn").disabled = true;
   document.getElementById("animate-in-date-range-btn").disabled = true;
 
-  const url =
-    dateFilter === "all"
-      ? args.animationEndpoint
-      : `${args.animationEndpoint}?start_date=${args.startDate}&end_date=${args.endDate}`;
+  var url;
+  if (dateFilter === "all") {
+    document.getElementById("pause-animate-all-btn").style.display =
+      "inline-block";
+    url = args.animationEndpoint;
+  } else {
+    document.getElementById("pause-animate-in-date-range-btn").style.display =
+      "inline-block";
+    url = `${args.animationEndpoint}?start_date=${args.startDate}&end_date=${args.endDate}`;
+  }
 
   args.geometryOption === "runs"
     ? animateSegments(url)
@@ -1412,5 +1427,24 @@ function createAnimationDateTimeouts(startDate, endDate, daysPerSecond) {
     }, (1000 * diffDays) / daysPerSecond);
     animationTimeouts.push(timeoutId);
     previousDateStr = dateStr;
+  }
+}
+
+/** Upon pausing an animation, hide pause button and show play button. */
+function pauseAnimation(dateFilter) {
+  animationTimeouts.forEach(clearTimeout);
+  animationTimeouts = [];
+
+  const idDateTerm = dateFilter === "all" ? "all" : "in-date-range";
+  const pauseButton = document.getElementById(
+    `pause-animate-${idDateTerm}-btn`
+  );
+  const playButton = document.getElementById(`play-animate-${idDateTerm}-btn`);
+
+  // only switch button hide/show if we're currently animating and therefore
+  // pausing is a valid action
+  if (pauseButton.style.display !== "none") {
+    pauseButton.style.display = "none";
+    playButton.style.display = "inline-block";
   }
 }
