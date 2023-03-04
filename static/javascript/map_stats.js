@@ -34,6 +34,13 @@ const defaultMissingStyle = {
   smoothFactor: 1,
 };
 
+const showAndAnimateButtonIDs = [
+  "animate-all-btn",
+  "animate-in-date-range-btn",
+  "show-all-btn",
+  "show-in-date-range-btn",
+];
+
 /** Total length in kilometres of all segments in the challenge.
  *
  * Segments have already been ignored prior to populating `segmentData`.
@@ -206,14 +213,15 @@ function refreshStatsByRunTable() {
   });
 }
 
-/** Re-enable animation buttons if geometry option supports animation. */
+/** Re-enable buttons if geometry option supports animation. */
 function resetAnimationButtons() {
   let geometryOption = document.querySelector(
     "[name=geometry-options]:checked"
   ).id;
   if (geometryOption === "runs" || geometryOption === "run_linestrings") {
-    document.getElementById("animate-all-btn").disabled = false;
-    document.getElementById("animate-in-date-range-btn").disabled = false;
+    showAndAnimateButtonIDs.forEach((id) => {
+      document.getElementById(id).disabled = false;
+    });
   }
   const animationControlButtonIds = [
     "play-animate-all-btn",
@@ -953,8 +961,9 @@ function animateData(dateFilter) {
     return;
   }
 
-  document.getElementById("animate-all-btn").disabled = true;
-  document.getElementById("animate-in-date-range-btn").disabled = true;
+  showAndAnimateButtonIDs.forEach((id) => {
+    document.getElementById(id).disabled = true;
+  });
 
   var url;
   if (dateFilter === "all") {
@@ -1390,18 +1399,18 @@ let animationButtonIds = ["animate-all-btn", "animate-in-date-range-btn"];
 
 /** Enable animation buttons for geometry options that allow it. */
 function enableAnimation() {
-  animationButtonIds.forEach((id) => {
-    let element = document.getElementById(id);
-    element.removeAttribute("disabled", "");
+  showAndAnimateButtonIDs.forEach((id) => {
+    document.getElementById(id).disabled = false;
   });
 }
 
 /** Disable animation buttons for geometry options that do not allow it. */
 function disableAnimation() {
-  animationButtonIds.forEach((id) => {
-    let element = document.getElementById(id);
-    element.setAttribute("disabled", "");
-  });
+  showAndAnimateButtonIDs
+    .filter((id) => id.includes("animate"))
+    .forEach((id) => {
+      document.getElementById(id).disabled = true;
+    });
 }
 
 /** Create timeouts for current date displayed during animation. */
