@@ -1003,6 +1003,7 @@ function animateData(dateFilter, paused) {
     : animateLinestrings(url, pauseDate);
 }
 
+/** Get data to enable animation over time using OSM segments. */
 async function getAnimateSegmentsData(url) {
   return fetch(url)
     .then((response) => response.json())
@@ -1104,49 +1105,74 @@ async function animateSegments(url, pauseDate) {
 // Milliseconds in a day
 const msInDay = 1000 * 60 * 60 * 24;
 
-/** Animate all segments in time order at speed determined by slider. */
-function animateLinestrings(url, pauseDate) {
-  fetch(url)
+/** Get run linestrings to allow animation over time. */
+async function getAnimateLinestringsData(url) {
+  return fetch(url)
     .then((response) => response.json())
     .then((runLinestrings) => {
       runLinestrings = filterLinestringsToPolygon(runLinestrings);
       if (runLinestrings.length === 0) {
         resetAnimationButtons();
-        return;
       }
-
-      const daysPerSecond = parseInt(
-        document.getElementById("animation-speed").value
-      );
-
-      // define run linestring timeouts
-      let totalDelayMs = 0;
-      let currentDate = null;
-      for (let i = 0; i < runLinestrings.length; i++) {
-        let run = runLinestrings[i];
-        let runDate = new Date(run.date);
-        let diffDays =
-          currentDate === null ? 0 : (runDate - currentDate) / msInDay;
-
-        const timeoutId = setTimeout(() => {
-          showRunLinestrings([run], false);
-        }, totalDelayMs);
-        animationTimeouts.push(timeoutId);
-        totalDelayMs += 1000 * (diffDays / daysPerSecond);
-        currentDate = runDate;
-      }
-
-      // define date update timeouts
-      const startDate = new Date(runLinestrings[0].date);
-      const endDate = new Date(last(runLinestrings).date);
-      createAnimationDateTimeouts(startDate, endDate, daysPerSecond);
-
-      // clean up timeout ids in case we animate again
-      setTimeout(() => {
-        resetAnimationButtons();
-        animationTimeouts = [];
-      }, totalDelayMs);
+      animationPauseCache = {
+        url,
+        data: runLinestrings,
+      };
+      return runLinestrings;
     });
+}
+
+/** Animate all segments in time order at speed determined by slider. */
+async function animateLinestrings(url, pauseDate) {
+  const paused = pauseDate !== undefined;
+  var runLinestrings = await (paused || animationPauseCache.url === url
+    ? animationPauseCache.data
+    : getAnimateLinestringsData(url));
+
+  const startDate = new Date(runLinestrings[0].date);
+  const endDate = new Date(last(runLinestrings).date);
+  const animationStartDate = paused ? new Date(pauseDate) : startDate;
+
+  // if unpausing, retain only runs after the paused date
+  if (paused) {
+    runLinestrings = runLinestrings.filter(
+      (r) => new Date(r.date) >= animationStartDate
+    );
+  }
+
+  // define run linestring timeouts
+  const daysPerSecond = parseInt(
+    document.getElementById("animation-speed").value
+  );
+  let totalDelayMs = 0;
+  let currentDate = null;
+  for (let i = 0; i < runLinestrings.length; i++) {
+    let run = runLinestrings[i];
+    let runDate = new Date(run.date);
+    let diffDays =
+      currentDate === null ? 0 : (runDate - animationStartDate) / msInDay;
+
+    const timeoutId = setTimeout(() => {
+      showRunLinestrings([run], false);
+    }, totalDelayMs);
+    animationTimeouts.push(timeoutId);
+    totalDelayMs += 1000 * (diffDays / daysPerSecond);
+    currentDate = runDate;
+  }
+
+  // define date update timeouts
+  createAnimationDateTimeouts(
+    startDate,
+    endDate,
+    paused ? animationStartDate : null,
+    daysPerSecond
+  );
+
+  // clean up timeout ids in case we animate again
+  setTimeout(() => {
+    resetAnimationButtons();
+    animationTimeouts = [];
+  }, totalDelayMs);
 }
 
 /** Toggle whether the stats overlay is collapsed or not */
