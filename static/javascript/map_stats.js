@@ -1065,16 +1065,16 @@ async function animateSegments(url, pauseDate) {
   const daysPerSecond = parseInt(
     document.getElementById("animation-speed").value
   );
-  let totalDelayMs = 0;
+  let currentDelayMs = 0;
 
   // define run timeouts
   runsByDate.forEach((r) => {
+    let diffDays = (new Date(r.date) - animationStartDate) / msInDay;
+    currentDelayMs = 1000 * (diffDays / daysPerSecond);
     const timeoutId = setTimeout(() => {
       showSegments(r.segments, false);
-    }, totalDelayMs);
+    }, currentDelayMs);
     animationTimeouts.push(timeoutId);
-    let diffDays = (new Date(r.date) - animationStartDate) / msInDay;
-    totalDelayMs += 1000 * (diffDays / daysPerSecond);
   });
 
   // define date update timeouts
@@ -1086,10 +1086,13 @@ async function animateSegments(url, pauseDate) {
   );
 
   // clean up timeout ids in case we animate again
-  setTimeout(() => {
+  const timeout = setTimeout(() => {
     resetAnimationButtons();
     animationTimeouts = [];
-  }, totalDelayMs);
+  }, currentDelayMs);
+
+  // still need to push this so that it gets cancelled when pausing
+  animationTimeouts.push(timeout);
 
   if (!paused) {
     const segmentCounts = getSegmentCounts(runsByDate);
@@ -1144,20 +1147,17 @@ async function animateLinestrings(url, pauseDate) {
   const daysPerSecond = parseInt(
     document.getElementById("animation-speed").value
   );
-  let totalDelayMs = 0;
-  let currentDate = null;
+  let currentDelayMs = 0;
   for (let i = 0; i < runLinestrings.length; i++) {
     let run = runLinestrings[i];
     let runDate = new Date(run.date);
-    let diffDays =
-      currentDate === null ? 0 : (runDate - animationStartDate) / msInDay;
+    let diffDays = (runDate - animationStartDate) / msInDay;
+    currentDelayMs = 1000 * (diffDays / daysPerSecond);
 
     const timeoutId = setTimeout(() => {
       showRunLinestrings([run], false);
-    }, totalDelayMs);
+    }, currentDelayMs);
     animationTimeouts.push(timeoutId);
-    totalDelayMs += 1000 * (diffDays / daysPerSecond);
-    currentDate = runDate;
   }
 
   // define date update timeouts
@@ -1169,10 +1169,13 @@ async function animateLinestrings(url, pauseDate) {
   );
 
   // clean up timeout ids in case we animate again
-  setTimeout(() => {
+  const timeout = setTimeout(() => {
     resetAnimationButtons();
     animationTimeouts = [];
-  }, totalDelayMs);
+  }, currentDelayMs);
+
+  // still need to push this so that it gets cancelled when pausing
+  animationTimeouts.push(timeout);
 }
 
 /** Toggle whether the stats overlay is collapsed or not */
@@ -1190,6 +1193,7 @@ function collapseStatsOverlay() {
 /** Remove the currently drawn polygon from the map. */
 function removeDrawnPolygon() {
   if (currentPolygon !== undefined) {
+    animationPauseCache = { url: "", data: [] };
     drawingLayer.removeLayer(currentPolygon);
     currentPolygon = undefined;
     currentPolygonType = undefined;
@@ -1520,17 +1524,15 @@ function createAnimationDateTimeouts(
   const animationStartDate = pauseDate === null ? startDate : pauseDate;
 
   var date = pauseDate === null ? new Date(startDate) : new Date(pauseDate);
-  var previousDateStr = "2000-01-01";
-
   while (date < endDate) {
     date = addDays(date, 1);
     const dateStr = formatDateStr(date);
-    const diffDays = (date - animationStartDate) / msInDay;
+    const sliderDiffDays = (date - startDate) / msInDay;
+    const timeoutDiffDays = (date - animationStartDate) / msInDay;
     const timeoutId = setTimeout(() => {
-      updateDateDiv(dateStr, diffDays);
-    }, (1000 * diffDays) / daysPerSecond);
+      updateDateDiv(dateStr, sliderDiffDays);
+    }, 1000 * (timeoutDiffDays / daysPerSecond));
     animationTimeouts.push(timeoutId);
-    previousDateStr = dateStr;
   }
 }
 
