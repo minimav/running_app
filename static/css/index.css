@@ -250,3 +250,7 @@ input[type="checkbox"] {
 #upload-run {
   pointer-events: none;
 }
+
+.animation-control-btn {
+  display: none;
+}

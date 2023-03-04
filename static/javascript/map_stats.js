@@ -34,6 +34,19 @@ const defaultMissingStyle = {
   smoothFactor: 1,
 };
 
+const showAndAnimateButtonIds = [
+  "animate-all-btn",
+  "animate-in-date-range-btn",
+  "show-all-btn",
+  "show-in-date-range-btn",
+];
+
+/** Cache of data used in animations to allow (un)pausing without repeat fetches. */
+var animationPauseCache = {
+  url: "",
+  data: [],
+};
+
 /** Total length in kilometres of all segments in the challenge.
  *
  * Segments have already been ignored prior to populating `segmentData`.
@@ -206,15 +219,25 @@ function refreshStatsByRunTable() {
   });
 }
 
-/** Re-enable animation buttons if geometry option supports animation. */
+/** Re-enable buttons if geometry option supports animation. */
 function resetAnimationButtons() {
   let geometryOption = document.querySelector(
     "[name=geometry-options]:checked"
   ).id;
   if (geometryOption === "runs" || geometryOption === "run_linestrings") {
-    document.getElementById("animate-all-btn").disabled = false;
-    document.getElementById("animate-in-date-range-btn").disabled = false;
+    showAndAnimateButtonIds.forEach((id) => {
+      document.getElementById(id).disabled = false;
+    });
   }
+  const animationControlButtonIds = [
+    "play-animate-all-btn",
+    "pause-animate-all-btn",
+    "play-animate-in-date-range-btn",
+    "pause-animate-in-date-range-btn",
+  ];
+  animationControlButtonIds.forEach((id) => {
+    document.getElementById(id).style.display = "none";
+  });
 }
 
 /** Remove currently displayed segments and associated stats. */
@@ -936,30 +959,53 @@ function showMissing(url) {
 }
 
 /** Animate specified geometry option at speed determined by slider. */
-function animateData(dateFilter) {
-  removeSegments(false);
-
+function animateData(dateFilter, paused) {
   const args = parseArgs(dateFilter === "date-range");
   if (args === undefined) {
     return;
   }
 
-  document.getElementById("animate-all-btn").disabled = true;
-  document.getElementById("animate-in-date-range-btn").disabled = true;
+  // only remove segments if not unpausing an animation
+  var pauseDate;
+  if (!paused) {
+    removeSegments(false);
+  } else {
+    pauseDate = document.getElementById(
+      "animation-date-slider-current-date"
+    ).innerHTML;
+  }
 
-  const url =
-    dateFilter === "all"
-      ? args.animationEndpoint
-      : `${args.animationEndpoint}?start_date=${args.startDate}&end_date=${args.endDate}`;
+  const playControlIds = [
+    "play-animate-in-date-range-btn",
+    "play-animate-all-btn",
+  ];
+  playControlIds.forEach((id) => {
+    document.getElementById(id).style.display = "none";
+  });
+
+  showAndAnimateButtonIds.forEach((id) => {
+    document.getElementById(id).disabled = true;
+  });
+
+  var url;
+  if (dateFilter === "all") {
+    document.getElementById("pause-animate-all-btn").style.display =
+      "inline-block";
+    url = args.animationEndpoint;
+  } else {
+    document.getElementById("pause-animate-in-date-range-btn").style.display =
+      "inline-block";
+    url = `${args.animationEndpoint}?start_date=${args.startDate}&end_date=${args.endDate}`;
+  }
 
   args.geometryOption === "runs"
-    ? animateSegments(url)
-    : animateLinestrings(url);
+    ? animateSegments(url, pauseDate)
+    : animateLinestrings(url, pauseDate);
 }
 
-/** Animate all segments in time order at speed determined by slider. */
-function animateSegments(url) {
-  fetch(url)
+/** Get data to enable animation over time using OSM segments. */
+async function getAnimateSegmentsData(url) {
+  return fetch(url)
     .then((response) => response.json())
     .then((segmentsToAnimateByDate) => {
       let filteredRunsByDate = [];
@@ -972,99 +1018,164 @@ function animateSegments(url) {
           });
         }
       });
+      animationPauseCache = {
+        url,
+        data: filteredRunsByDate,
+      };
       if (filteredRunsByDate.length === 0) {
         resetAnimationButtons();
-        return;
       }
-
-      const daysPerSecond = parseInt(
-        document.getElementById("animation-speed").value
-      );
-      let totalDelayMs = 0;
-
-      // define run timeouts
-      const segmentCounts = {};
-      filteredRunsByDate.forEach((d) => {
-        d.segments.forEach((s) => {
-          if (segmentCounts[s.segment_id] === undefined) {
-            segmentCounts[s.segment_id] = 1;
-          } else {
-            segmentCounts[s.segment_id] += 1;
-          }
-        });
-        const timeoutId = setTimeout(() => {
-          showSegments(d.segments, false);
-        }, totalDelayMs);
-        animationTimeouts.push(timeoutId);
-        totalDelayMs += 1000 * (d.diff_days / daysPerSecond);
-      });
-
-      // define date update timeouts
-      const startDate = new Date(filteredRunsByDate[0].date);
-      const endDate = new Date(last(filteredRunsByDate).date);
-      createAnimationDateTimeouts(startDate, endDate, daysPerSecond);
-
-      // clean up timeout ids in case we animate again
-      setTimeout(() => {
-        resetAnimationButtons();
-        animationTimeouts = [];
-      }, totalDelayMs);
-
-      showOverallStats({
-        unique: lengthKmOfUniqueSegments(segmentCounts),
-        repeats: lengthKmOfSegments(segmentCounts),
-        totalLengthKm: totalLengthKm,
-      });
-      showStatsByRun(filteredRunsByDate, null);
+      return filteredRunsByDate;
     });
+}
+
+/** Count the number of traversals per segment for a collection of runs*/
+function getSegmentCounts(runs) {
+  const segmentCounts = {};
+  runs
+    .map((r) => r.segments)
+    .forEach((s) => {
+      if (segmentCounts[s.segment_id] === undefined) {
+        segmentCounts[s.segment_id] = 1;
+      } else {
+        segmentCounts[s.segment_id] += 1;
+      }
+    });
+  return segmentCounts;
+}
+
+/** Animate all segments in time order at speed determined by slider. */
+async function animateSegments(url, pauseDate) {
+  const paused = pauseDate !== undefined;
+  var runsByDate = await (paused || animationPauseCache.url === url
+    ? animationPauseCache.data
+    : getAnimateSegmentsData(url));
+
+  const startDate = new Date(runsByDate[0].date);
+  const endDate = new Date(last(runsByDate).date);
+  const animationStartDate = paused ? new Date(pauseDate) : startDate;
+
+  // if unpausing, retain only runs after the paused date
+  if (paused) {
+    runsByDate = runsByDate.filter(
+      (r) => new Date(r.date) >= animationStartDate
+    );
+  }
+
+  const daysPerSecond = parseInt(
+    document.getElementById("animation-speed").value
+  );
+  let currentDelayMs = 0;
+
+  // define run timeouts
+  runsByDate.forEach((r) => {
+    let diffDays = (new Date(r.date) - animationStartDate) / msInDay;
+    currentDelayMs = 1000 * (diffDays / daysPerSecond);
+    const timeoutId = setTimeout(() => {
+      showSegments(r.segments, false);
+    }, currentDelayMs);
+    animationTimeouts.push(timeoutId);
+  });
+
+  // define date update timeouts
+  createAnimationDateTimeouts(
+    startDate,
+    endDate,
+    paused ? animationStartDate : null,
+    daysPerSecond
+  );
+
+  // clean up timeout ids in case we animate again
+  const timeout = setTimeout(() => {
+    resetAnimationButtons();
+    animationTimeouts = [];
+  }, currentDelayMs);
+
+  // still need to push this so that it gets cancelled when pausing
+  animationTimeouts.push(timeout);
+
+  if (!paused) {
+    const segmentCounts = getSegmentCounts(runsByDate);
+    showOverallStats({
+      unique: lengthKmOfUniqueSegments(segmentCounts),
+      repeats: lengthKmOfSegments(segmentCounts),
+      totalLengthKm: totalLengthKm,
+    });
+    showStatsByRun(runsByDate, null);
+  }
 }
 
 // Milliseconds in a day
 const msInDay = 1000 * 60 * 60 * 24;
 
-/** Animate all segments in time order at speed determined by slider. */
-function animateLinestrings(url) {
-  fetch(url)
+/** Get run linestrings to allow animation over time. */
+async function getAnimateLinestringsData(url) {
+  return fetch(url)
     .then((response) => response.json())
     .then((runLinestrings) => {
       runLinestrings = filterLinestringsToPolygon(runLinestrings);
       if (runLinestrings.length === 0) {
         resetAnimationButtons();
-        return;
       }
-
-      const daysPerSecond = parseInt(
-        document.getElementById("animation-speed").value
-      );
-
-      // define run linestring timeouts
-      let totalDelayMs = 0;
-      let currentDate = null;
-      for (let i = 0; i < runLinestrings.length; i++) {
-        let run = runLinestrings[i];
-        let runDate = new Date(run.date);
-        let diffDays =
-          currentDate === null ? 0 : (runDate - currentDate) / msInDay;
-
-        const timeoutId = setTimeout(() => {
-          showRunLinestrings([run], false);
-        }, totalDelayMs);
-        animationTimeouts.push(timeoutId);
-        totalDelayMs += 1000 * (diffDays / daysPerSecond);
-        currentDate = runDate;
-      }
-
-      // define date update timeouts
-      const startDate = new Date(runLinestrings[0].date);
-      const endDate = new Date(last(runLinestrings).date);
-      createAnimationDateTimeouts(startDate, endDate, daysPerSecond);
-
-      // clean up timeout ids in case we animate again
-      setTimeout(() => {
-        resetAnimationButtons();
-        animationTimeouts = [];
-      }, totalDelayMs);
+      animationPauseCache = {
+        url,
+        data: runLinestrings,
+      };
+      return runLinestrings;
     });
+}
+
+/** Animate all segments in time order at speed determined by slider. */
+async function animateLinestrings(url, pauseDate) {
+  const paused = pauseDate !== undefined;
+  var runLinestrings = await (paused || animationPauseCache.url === url
+    ? animationPauseCache.data
+    : getAnimateLinestringsData(url));
+
+  const startDate = new Date(runLinestrings[0].date);
+  const endDate = new Date(last(runLinestrings).date);
+  const animationStartDate = paused ? new Date(pauseDate) : startDate;
+
+  // if unpausing, retain only runs after the paused date
+  if (paused) {
+    runLinestrings = runLinestrings.filter(
+      (r) => new Date(r.date) >= animationStartDate
+    );
+  }
+
+  // define run linestring timeouts
+  const daysPerSecond = parseInt(
+    document.getElementById("animation-speed").value
+  );
+  let currentDelayMs = 0;
+  for (let i = 0; i < runLinestrings.length; i++) {
+    let run = runLinestrings[i];
+    let runDate = new Date(run.date);
+    let diffDays = (runDate - animationStartDate) / msInDay;
+    currentDelayMs = 1000 * (diffDays / daysPerSecond);
+
+    const timeoutId = setTimeout(() => {
+      showRunLinestrings([run], false);
+    }, currentDelayMs);
+    animationTimeouts.push(timeoutId);
+  }
+
+  // define date update timeouts
+  createAnimationDateTimeouts(
+    startDate,
+    endDate,
+    paused ? animationStartDate : null,
+    daysPerSecond
+  );
+
+  // clean up timeout ids in case we animate again
+  const timeout = setTimeout(() => {
+    resetAnimationButtons();
+    animationTimeouts = [];
+  }, currentDelayMs);
+
+  // still need to push this so that it gets cancelled when pausing
+  animationTimeouts.push(timeout);
 }
 
 /** Toggle whether the stats overlay is collapsed or not */
@@ -1082,6 +1193,7 @@ function collapseStatsOverlay() {
 /** Remove the currently drawn polygon from the map. */
 function removeDrawnPolygon() {
   if (currentPolygon !== undefined) {
+    animationPauseCache = { url: "", data: [] };
     drawingLayer.removeLayer(currentPolygon);
     currentPolygon = undefined;
     currentPolygonType = undefined;
@@ -1375,42 +1487,70 @@ let animationButtonIds = ["animate-all-btn", "animate-in-date-range-btn"];
 
 /** Enable animation buttons for geometry options that allow it. */
 function enableAnimation() {
-  animationButtonIds.forEach((id) => {
-    let element = document.getElementById(id);
-    element.removeAttribute("disabled", "");
+  showAndAnimateButtonIds.forEach((id) => {
+    document.getElementById(id).disabled = false;
   });
 }
 
 /** Disable animation buttons for geometry options that do not allow it. */
 function disableAnimation() {
-  animationButtonIds.forEach((id) => {
-    let element = document.getElementById(id);
-    element.setAttribute("disabled", "");
-  });
+  showAndAnimateButtonIds
+    .filter((id) => id.includes("animate"))
+    .forEach((id) => {
+      document.getElementById(id).disabled = true;
+    });
 }
 
 /** Create timeouts for current date displayed during animation. */
-function createAnimationDateTimeouts(startDate, endDate, daysPerSecond) {
-  var date = new Date(startDate);
-  var previousDateStr = "2000-01-01";
-
-  // define slider start and end times
+function createAnimationDateTimeouts(
+  startDate,
+  endDate,
+  pauseDate,
+  daysPerSecond
+) {
   let slider = document.getElementById("animation-date-slider");
-  slider.min = 0;
-  slider.max = Math.ceil((endDate - startDate) / msInDay);
-  document.getElementById("animation-date-slider-min").innerHTML =
-    formatDateStr(startDate);
-  document.getElementById("animation-date-slider-max").innerHTML =
-    formatDateStr(endDate);
+  if (pauseDate === null) {
+    // define slider start and end times if not unpausing
+    slider.min = 0;
+    slider.max = Math.ceil((endDate - startDate) / msInDay);
+    document.getElementById("animation-date-slider-min").innerHTML =
+      formatDateStr(startDate);
+    document.getElementById("animation-date-slider-max").innerHTML =
+      formatDateStr(endDate);
+  }
 
+  // use this as reference point for timeouts, either the start date or
+  // the date we paused a previous animation
+  const animationStartDate = pauseDate === null ? startDate : pauseDate;
+
+  var date = pauseDate === null ? new Date(startDate) : new Date(pauseDate);
   while (date < endDate) {
     date = addDays(date, 1);
     const dateStr = formatDateStr(date);
-    const diffDays = (date - startDate) / msInDay;
+    const sliderDiffDays = (date - startDate) / msInDay;
+    const timeoutDiffDays = (date - animationStartDate) / msInDay;
     const timeoutId = setTimeout(() => {
-      updateDateDiv(dateStr, diffDays);
-    }, (1000 * diffDays) / daysPerSecond);
+      updateDateDiv(dateStr, sliderDiffDays);
+    }, 1000 * (timeoutDiffDays / daysPerSecond));
     animationTimeouts.push(timeoutId);
-    previousDateStr = dateStr;
+  }
+}
+
+/** Upon pausing an animation, hide pause button and show play button. */
+function pauseAnimation(dateFilter) {
+  animationTimeouts.forEach(clearTimeout);
+  animationTimeouts = [];
+
+  const idDateTerm = dateFilter === "all" ? "all" : "in-date-range";
+  const pauseButton = document.getElementById(
+    `pause-animate-${idDateTerm}-btn`
+  );
+  const playButton = document.getElementById(`play-animate-${idDateTerm}-btn`);
+
+  // only switch button hide/show if we're currently animating and therefore
+  // pausing is a valid action
+  if (pauseButton.style.display !== "none") {
+    pauseButton.style.display = "none";
+    playButton.style.display = "inline-block";
   }
 }

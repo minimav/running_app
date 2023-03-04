@@ -375,7 +375,6 @@ def runs_for_animation(
             runs_by_date.append(
                 {
                     "date": current_date,
-                    "diff_days": diff_in_days(current_date, traversal["date"]),
                     "segments": current_segments,
                 }
             )
@@ -385,7 +384,6 @@ def runs_for_animation(
     runs_by_date.append(
         {
             "date": current_date,
-            "diff_days": 0,  # nothing to wait for after last run
             "segments": current_segments,
         }
     )
