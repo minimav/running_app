@@ -34,12 +34,18 @@ const defaultMissingStyle = {
   smoothFactor: 1,
 };
 
-const showAndAnimateButtonIDs = [
+const showAndAnimateButtonIds = [
   "animate-all-btn",
   "animate-in-date-range-btn",
   "show-all-btn",
   "show-in-date-range-btn",
 ];
+
+/** Cache of data used in animations to allow (un)pausing without repeat fetches. */
+var animationPauseCache = {
+  url: "",
+  data: [],
+};
 
 /** Total length in kilometres of all segments in the challenge.
  *
@@ -219,7 +225,7 @@ function resetAnimationButtons() {
     "[name=geometry-options]:checked"
   ).id;
   if (geometryOption === "runs" || geometryOption === "run_linestrings") {
-    showAndAnimateButtonIDs.forEach((id) => {
+    showAndAnimateButtonIds.forEach((id) => {
       document.getElementById(id).disabled = false;
     });
   }
@@ -953,15 +959,31 @@ function showMissing(url) {
 }
 
 /** Animate specified geometry option at speed determined by slider. */
-function animateData(dateFilter) {
-  removeSegments(false);
-
+function animateData(dateFilter, paused) {
   const args = parseArgs(dateFilter === "date-range");
   if (args === undefined) {
     return;
   }
 
-  showAndAnimateButtonIDs.forEach((id) => {
+  // only remove segments if not unpausing an animation
+  var pauseDate;
+  if (!paused) {
+    removeSegments(false);
+  } else {
+    pauseDate = document.getElementById(
+      "animation-date-slider-current-date"
+    ).innerHTML;
+  }
+
+  const playControlIds = [
+    "play-animate-in-date-range-btn",
+    "play-animate-all-btn",
+  ];
+  playControlIds.forEach((id) => {
+    document.getElementById(id).style.display = "none";
+  });
+
+  showAndAnimateButtonIds.forEach((id) => {
     document.getElementById(id).disabled = true;
   });
 
@@ -977,13 +999,12 @@ function animateData(dateFilter) {
   }
 
   args.geometryOption === "runs"
-    ? animateSegments(url)
-    : animateLinestrings(url);
+    ? animateSegments(url, pauseDate)
+    : animateLinestrings(url, pauseDate);
 }
 
-/** Animate all segments in time order at speed determined by slider. */
-function animateSegments(url) {
-  fetch(url)
+async function getAnimateSegmentsData(url) {
+  return fetch(url)
     .then((response) => response.json())
     .then((segmentsToAnimateByDate) => {
       let filteredRunsByDate = [];
@@ -996,58 +1017,95 @@ function animateSegments(url) {
           });
         }
       });
+      animationPauseCache = {
+        url,
+        data: filteredRunsByDate,
+      };
       if (filteredRunsByDate.length === 0) {
         resetAnimationButtons();
-        return;
       }
-
-      const daysPerSecond = parseInt(
-        document.getElementById("animation-speed").value
-      );
-      let totalDelayMs = 0;
-
-      // define run timeouts
-      const segmentCounts = {};
-      filteredRunsByDate.forEach((d) => {
-        d.segments.forEach((s) => {
-          if (segmentCounts[s.segment_id] === undefined) {
-            segmentCounts[s.segment_id] = 1;
-          } else {
-            segmentCounts[s.segment_id] += 1;
-          }
-        });
-        const timeoutId = setTimeout(() => {
-          showSegments(d.segments, false);
-        }, totalDelayMs);
-        animationTimeouts.push(timeoutId);
-        totalDelayMs += 1000 * (d.diff_days / daysPerSecond);
-      });
-
-      // define date update timeouts
-      const startDate = new Date(filteredRunsByDate[0].date);
-      const endDate = new Date(last(filteredRunsByDate).date);
-      createAnimationDateTimeouts(startDate, endDate, daysPerSecond);
-
-      // clean up timeout ids in case we animate again
-      setTimeout(() => {
-        resetAnimationButtons();
-        animationTimeouts = [];
-      }, totalDelayMs);
-
-      showOverallStats({
-        unique: lengthKmOfUniqueSegments(segmentCounts),
-        repeats: lengthKmOfSegments(segmentCounts),
-        totalLengthKm: totalLengthKm,
-      });
-      showStatsByRun(filteredRunsByDate, null);
+      return filteredRunsByDate;
     });
+}
+
+/** Count the number of traversals per segment for a collection of runs*/
+function getSegmentCounts(runs) {
+  const segmentCounts = {};
+  runs
+    .map((r) => r.segments)
+    .forEach((s) => {
+      if (segmentCounts[s.segment_id] === undefined) {
+        segmentCounts[s.segment_id] = 1;
+      } else {
+        segmentCounts[s.segment_id] += 1;
+      }
+    });
+  return segmentCounts;
+}
+
+/** Animate all segments in time order at speed determined by slider. */
+async function animateSegments(url, pauseDate) {
+  const paused = pauseDate !== undefined;
+  var runsByDate = await (paused || animationPauseCache.url === url
+    ? animationPauseCache.data
+    : getAnimateSegmentsData(url));
+
+  const startDate = new Date(runsByDate[0].date);
+  const endDate = new Date(last(runsByDate).date);
+  const animationStartDate = paused ? new Date(pauseDate) : startDate;
+
+  // if unpausing, retain only runs after the paused date
+  if (paused) {
+    runsByDate = runsByDate.filter(
+      (r) => new Date(r.date) >= animationStartDate
+    );
+  }
+
+  const daysPerSecond = parseInt(
+    document.getElementById("animation-speed").value
+  );
+  let totalDelayMs = 0;
+
+  // define run timeouts
+  runsByDate.forEach((r) => {
+    const timeoutId = setTimeout(() => {
+      showSegments(r.segments, false);
+    }, totalDelayMs);
+    animationTimeouts.push(timeoutId);
+    let diffDays = (new Date(r.date) - animationStartDate) / msInDay;
+    totalDelayMs += 1000 * (diffDays / daysPerSecond);
+  });
+
+  // define date update timeouts
+  createAnimationDateTimeouts(
+    startDate,
+    endDate,
+    paused ? animationStartDate : null,
+    daysPerSecond
+  );
+
+  // clean up timeout ids in case we animate again
+  setTimeout(() => {
+    resetAnimationButtons();
+    animationTimeouts = [];
+  }, totalDelayMs);
+
+  if (!paused) {
+    const segmentCounts = getSegmentCounts(runsByDate);
+    showOverallStats({
+      unique: lengthKmOfUniqueSegments(segmentCounts),
+      repeats: lengthKmOfSegments(segmentCounts),
+      totalLengthKm: totalLengthKm,
+    });
+    showStatsByRun(runsByDate, null);
+  }
 }
 
 // Milliseconds in a day
 const msInDay = 1000 * 60 * 60 * 24;
 
 /** Animate all segments in time order at speed determined by slider. */
-function animateLinestrings(url) {
+function animateLinestrings(url, pauseDate) {
   fetch(url)
     .then((response) => response.json())
     .then((runLinestrings) => {
@@ -1399,14 +1457,14 @@ let animationButtonIds = ["animate-all-btn", "animate-in-date-range-btn"];
 
 /** Enable animation buttons for geometry options that allow it. */
 function enableAnimation() {
-  showAndAnimateButtonIDs.forEach((id) => {
+  showAndAnimateButtonIds.forEach((id) => {
     document.getElementById(id).disabled = false;
   });
 }
 
 /** Disable animation buttons for geometry options that do not allow it. */
 function disableAnimation() {
-  showAndAnimateButtonIDs
+  showAndAnimateButtonIds
     .filter((id) => id.includes("animate"))
     .forEach((id) => {
       document.getElementById(id).disabled = true;
@@ -1414,23 +1472,34 @@ function disableAnimation() {
 }
 
 /** Create timeouts for current date displayed during animation. */
-function createAnimationDateTimeouts(startDate, endDate, daysPerSecond) {
-  var date = new Date(startDate);
-  var previousDateStr = "2000-01-01";
-
-  // define slider start and end times
+function createAnimationDateTimeouts(
+  startDate,
+  endDate,
+  pauseDate,
+  daysPerSecond
+) {
   let slider = document.getElementById("animation-date-slider");
-  slider.min = 0;
-  slider.max = Math.ceil((endDate - startDate) / msInDay);
-  document.getElementById("animation-date-slider-min").innerHTML =
-    formatDateStr(startDate);
-  document.getElementById("animation-date-slider-max").innerHTML =
-    formatDateStr(endDate);
+  if (pauseDate === null) {
+    // define slider start and end times if not unpausing
+    slider.min = 0;
+    slider.max = Math.ceil((endDate - startDate) / msInDay);
+    document.getElementById("animation-date-slider-min").innerHTML =
+      formatDateStr(startDate);
+    document.getElementById("animation-date-slider-max").innerHTML =
+      formatDateStr(endDate);
+  }
+
+  // use this as reference point for timeouts, either the start date or
+  // the date we paused a previous animation
+  const animationStartDate = pauseDate === null ? startDate : pauseDate;
+
+  var date = pauseDate === null ? new Date(startDate) : new Date(pauseDate);
+  var previousDateStr = "2000-01-01";
 
   while (date < endDate) {
     date = addDays(date, 1);
     const dateStr = formatDateStr(date);
-    const diffDays = (date - startDate) / msInDay;
+    const diffDays = (date - animationStartDate) / msInDay;
     const timeoutId = setTimeout(() => {
       updateDateDiv(dateStr, diffDays);
     }, (1000 * diffDays) / daysPerSecond);

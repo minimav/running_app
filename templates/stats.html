@@ -170,7 +170,7 @@
     type="submit"
     class="btn btn-primary btn-sm"
     id="animate-in-date-range-btn"
-    onclick="animateData('date-range')"
+    onclick="animateData('date-range', false)"
   >
     Animate
   </button>
@@ -178,6 +178,7 @@
     type="submit"
     class="btn btn-success btn-sm animation-control-btn"
     id="play-animate-in-date-range-btn"
+    onclick="animateData('date-range', true)"
   >
     <i class="fa fa-play"></i>
   </button>
@@ -209,7 +210,7 @@
     type="submit"
     class="btn btn-primary btn-sm"
     id="animate-all-btn"
-    onclick="animateData('all')"
+    onclick="animateData('all', false)"
   >
     Animate
   </button>
@@ -217,6 +218,7 @@
     type="submit"
     class="btn btn-success btn-sm animation-control-btn"
     id="play-animate-all-btn"
+    onclick="animateData('all', true)"
   >
     <i class="fa fa-play"></i>
   </button>
