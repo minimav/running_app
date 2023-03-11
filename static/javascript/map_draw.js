@@ -834,17 +834,12 @@ function snapToNetwork(event) {
             routeSegment.start_distance_metres <
             routeSegment.end_distance_metres;
 
-          let spatialIndexKey, allCoords;
+          let spatialIndexKey, allCoords, segmentId;
           try {
-            spatialIndexKey =
-              segmentIdToSpatialIndexKey[routeSegment.segment_id];
-            allCoords = switchCoords(
-              segmentData[spatialIndexKey]["geometry"]["coordinates"]
-            );
-            routeSegmentIds.push({
-              segmentId: routeSegment.segment_id,
-              direction: forwardsDirection,
-            });
+            segmentId = routeSegment.segment_id;
+            spatialIndexKey = segmentIdToSpatialIndexKey[segmentId];
+            const segment = segmentData[spatialIndexKey];
+            allCoords = switchCoords(segment["geometry"]["coordinates"]);
           } catch (err) {
             const nodeKey = createNodeKey(
               routeSegment.start_node,
@@ -854,11 +849,10 @@ function snapToNetwork(event) {
             allCoords = switchCoords(
               segmentData[spatialIndexKey]["geometry"]["coordinates"]
             );
-            const segmentId =
-              segmentData[spatialIndexKey].properties.segment_id;
-            routeSegmentIds.push({ segmentId, direction: forwardsDirection });
+            segmentId = segmentData[spatialIndexKey].properties.segment_id;
           }
 
+          var distanceOnSegmentKm;
           if (index === 0 && data.route.length === 1) {
             // within segment case
             const slicedCoords = forwardsDirection
@@ -874,7 +868,7 @@ function snapToNetwork(event) {
                   .reverse();
 
             routeCoordinates.push(...slicedCoords);
-            distanceKm +=
+            distanceOnSegmentKm =
               Math.abs(
                 routeSegment.end_distance_metres -
                   routeSegment.start_distance_metres
@@ -889,7 +883,7 @@ function snapToNetwork(event) {
                 : allCoords.slice(previousRouteData.snapInfo.geometryIndex);
 
             routeCoordinates.push(...slicedCoords);
-            distanceKm +=
+            distanceOnSegmentKm =
               Math.abs(
                 routeSegment.end_distance_metres -
                   routeSegment.start_distance_metres
@@ -902,7 +896,7 @@ function snapToNetwork(event) {
                 : allCoords.slice(snap.geometryIndex).reverse();
 
             routeCoordinates.push(...slicedCoords);
-            distanceKm +=
+            distanceOnSegmentKm =
               Math.abs(
                 routeSegment.end_distance_metres -
                   routeSegment.start_distance_metres
@@ -918,9 +912,16 @@ function snapToNetwork(event) {
               ? routeCoordinates.push(...allCoords)
               : routeCoordinates.push(...allCoords.reverse());
 
-            distanceKm += routeSegment.length_metres / 1000;
+            distanceOnSegmentKm = routeSegment.length_metres / 1000;
           }
+          distanceKm += distanceOnSegmentKm;
+          routeSegmentIds.push({
+            segmentId,
+            direction: forwardsDirection,
+            distanceOnSegmentKm,
+          });
         });
+
         const routeLine = new L.Polyline(routeCoordinates, {
           color: "blue",
           weight: 3,
@@ -931,7 +932,7 @@ function snapToNetwork(event) {
         newRouteData = {
           ...newRouteData,
           routeFromPrevious: routeLine,
-          distanceKm: distanceKm,
+          distanceKm,
           segmentIds: routeSegmentIds,
         };
         routeLine.addTo(map);
@@ -982,50 +983,65 @@ function snapToNetwork(event) {
 /** Container to store km distance markers. */
 const markersByKm = {};
 
-/** Add distance markers every km along a new bit of straight line route. */
+/** Add distance markers every km along a routed section of a run. */
 const addDistanceMarkersForRouting = (newRouteData) => {
   var km = getCurrentLengthKm();
-  newRouteData.segmentIds
-    .map((s) => s.segmentId)
-    .forEach((segmentId) => {
-      const segment = segmentData[segmentIdToSpatialIndexKey[segmentId]];
-      const segmentLengthKm = segment.properties.length_m / 1000;
-      const kmAfterSegment = km + segmentLengthKm;
+  newRouteData.segmentIds.forEach((segmentInfo, index) => {
+    const segment =
+      segmentData[segmentIdToSpatialIndexKey[segmentInfo.segmentId]];
+    const segmentLengthKm = segment.properties.length_m / 1000;
+    const kmAfterSegment = km + segmentInfo.distanceOnSegmentKm;
 
-      // make sure not to label 0km!
-      var kmLabel = Math.max(1, Math.ceil(km));
-      const lastPossibleKmLabel = Math.floor(kmAfterSegment);
-      const numCoordinates = segment.geometry.coordinates.length;
-      while (kmLabel <= lastPossibleKmLabel) {
-        // rather than calculate distances along the segment properly, just
-        // linearly interpolate the index assuming roughly constant steps between
-        // each lat-lng
-        const index = Math.floor(
-          (numCoordinates * (kmLabel - km)) / segmentLengthKm
-        );
-        const [lng, lat] = segment.geometry.coordinates[index];
+    // make sure not to label 0km!
+    var kmLabel = Math.max(1, Math.ceil(km));
+    const lastPossibleKmLabel = Math.floor(kmAfterSegment);
+    const numCoordinates = segment.geometry.coordinates.length;
+    while (kmLabel <= lastPossibleKmLabel) {
+      // rather than calculate distances along the segment properly, just
+      // linearly interpolate the index assuming roughly constant steps between
+      // each lat-lng
+      var lat, lng;
+      const segmentFraction = (kmLabel - km) / segmentLengthKm;
 
-        const kmMarker = new L.CircleMarker(new L.LatLng(lat, lng), {
-          radius: 8,
-          fillOpacity: 1.0,
-          fillColor: "blue",
-          color: "blue",
-          pane: "points",
-        });
-        kmMarker.addTo(map);
-
-        let kmLabelText = createDistanceTooltip(
-          lat,
-          lng,
-          `${kmLabel.toFixed(0)}`
-        );
-        kmLabelText.addTo(map);
-
-        markersByKm[kmLabel] = { kmLabelText, kmMarker };
-        kmLabel += 1;
+      // here we need to take into account both the direction of travel on the
+      // segment relative to its geometry and the start segment, for which we
+      // cannot calculate the index shift from either the start/end of the
+      // segment like we can for the intermediate and end segment cases
+      var index;
+      if (index === 0) {
+        let previousRouteData = routeData[routeData.length - 1];
+        let startSnapIndex = previousRouteData.snapInfo.geometryIndex;
+        index = segmentInfo.direction
+          ? startSnapIndex + Math.floor(numCoordinates * segmentFraction)
+          : startSnapIndex - Math.floor(numCoordinates * segmentFraction);
+      } else {
+        index = segmentInfo.direction
+          ? Math.floor(numCoordinates * segmentFraction)
+          : Math.floor(numCoordinates * (1 - segmentFraction));
       }
-      km = kmAfterSegment;
-    });
+      [lng, lat] = segment.geometry.coordinates[index];
+
+      const kmMarker = new L.CircleMarker(new L.LatLng(lat, lng), {
+        radius: 8,
+        fillOpacity: 1.0,
+        fillColor: "blue",
+        color: "blue",
+        pane: "points",
+      });
+      kmMarker.addTo(map);
+
+      let kmLabelText = createDistanceTooltip(
+        lat,
+        lng,
+        `${kmLabel.toFixed(0)}`
+      );
+      kmLabelText.addTo(map);
+
+      markersByKm[kmLabel] = { kmLabelText, kmMarker };
+      kmLabel += 1;
+    }
+    km = kmAfterSegment;
+  });
 };
 
 /** Add distance markers every km along a new bit of straight line route. */
