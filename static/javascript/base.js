@@ -182,7 +182,6 @@ const setupPanes = (map) => {
   paneZIndexes.forEach(({ name, zIndex }) => {
     panes[name] = map.createPane(name);
     panes[name].style.zIndex = zIndex;
-    panes[name].style.pointerEvents = "none";
   });
 };
 
