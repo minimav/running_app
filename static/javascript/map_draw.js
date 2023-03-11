@@ -982,7 +982,51 @@ function snapToNetwork(event) {
 /** Container to store km distance markers. */
 const markersByKm = {};
 
-const addDistanceMarkersForRouting = (newRouteData) => {};
+/** Add distance markers every km along a new bit of straight line route. */
+const addDistanceMarkersForRouting = (newRouteData) => {
+  var km = getCurrentLengthKm();
+  newRouteData.segmentIds
+    .map((s) => s.segmentId)
+    .forEach((segmentId) => {
+      const segment = segmentData[segmentIdToSpatialIndexKey[segmentId]];
+      const segmentLengthKm = segment.properties.length_m / 1000;
+      const kmAfterSegment = km + segmentLengthKm;
+
+      // make sure not to label 0km!
+      var kmLabel = Math.max(1, Math.ceil(km));
+      const lastPossibleKmLabel = Math.floor(kmAfterSegment);
+      const numCoordinates = segment.geometry.coordinates.length;
+      while (kmLabel <= lastPossibleKmLabel) {
+        // rather than calculate distances along the segment properly, just
+        // linearly interpolate the index assuming roughly constant steps between
+        // each lat-lng
+        const index = Math.floor(
+          (numCoordinates * (kmLabel - km)) / segmentLengthKm
+        );
+        const [lng, lat] = segment.geometry.coordinates[index];
+
+        const kmMarker = new L.CircleMarker(new L.LatLng(lat, lng), {
+          radius: 8,
+          fillOpacity: 1.0,
+          fillColor: "blue",
+          color: "blue",
+          pane: "points",
+        });
+        kmMarker.addTo(map);
+
+        let kmLabelText = createDistanceTooltip(
+          lat,
+          lng,
+          `${kmLabel.toFixed(0)}`
+        );
+        kmLabelText.addTo(map);
+
+        markersByKm[kmLabel] = { kmLabelText, kmMarker };
+        kmLabel += 1;
+      }
+      km = kmAfterSegment;
+    });
+};
 
 /** Add distance markers every km along a new bit of straight line route. */
 const addDistanceMarkersForStraightLine = (newRouteData, currentLengthKm) => {
