@@ -12,6 +12,22 @@ let map,
 // references to geometries created when uploading a run
 let uploadedRunPolyline, uploadedStartPoint, uploadedEndPoint;
 
+// default style given to a point on a route and a km marker
+const routePointStyle = {
+  radius: 8,
+  fillOpacity: 1.0,
+  color: "blue",
+  pane: "points",
+};
+
+/** Create a circle marker at a location with overriding styles. */
+function createCircleMarker(lat, lng, style) {
+  return new L.CircleMarker(new L.LatLng(lat, lng), {
+    ...routePointStyle,
+    ...style,
+  });
+}
+
 /** Whether routing should be used or not. */
 function useRoutingBetweenSegments() {
   return document.getElementById("route-on-click").checked;
@@ -612,6 +628,25 @@ const createDistanceTooltip = (lat, lng, distanceKm) => {
     .setLatLng(new L.LatLng(lat, lng));
 };
 
+/** For a location find nearby segments using the spatial index. */
+function getNearbySegments(lat, lng) {
+  // 100m buffer in a simple way not taking into account high/low latitudes
+  let latBuffer = 0.001,
+    lngBuffer = 0.001,
+    factor = 0;
+  let nearbySpatialIndexKeys = [];
+  while (nearbySpatialIndexKeys.length === 0 && factor < 5) {
+    nearbySpatialIndexKeys = getSegmentsNearbyToLatLng(
+      lat,
+      lng,
+      latBuffer * Math.pow(2, factor),
+      lngBuffer * Math.pow(2, factor)
+    );
+    factor += 1;
+  }
+  return nearbySpatialIndexKeys;
+}
+
 // TODO: clean up this function
 // TODO: record better route overall, not just between current and previous point
 let routeData = [
@@ -634,59 +669,34 @@ function snapToNetwork(event) {
   const routing = document.getElementById("route-on-click").checked;
 
   const fillColor = routeData.length === 0 ? "#198754" : "#dc3545";
-  const clickedPoint = new L.CircleMarker(event.latlng, {
-    radius: 8,
-    fillOpacity: 1.0,
-    fillColor: fillColor,
-    color: "blue",
-    pane: "points",
-  });
+  const clickedPoint = createCircleMarker(lat, lng, { fillColor });
 
   // we'll add to this as we go depending on snapping results
   let newRouteData = { clickedPoint };
 
-  // 100m buffer in a simple way not taking into account high/low latitudes
-  let latBuffer = 0.001,
-    lngBuffer = 0.001,
-    factor = 0;
-  let nearbySpatialIndexKeys = [];
-  while (nearbySpatialIndexKeys.length === 0 && factor < 5) {
-    nearbySpatialIndexKeys = getSegmentsNearbyToLatLng(
-      lat,
-      lng,
-      latBuffer * Math.pow(2, factor),
-      lngBuffer * Math.pow(2, factor)
-    );
-    factor += 1;
-  }
+  const nearbySpatialIndexKeys = getNearbySegments(lat, lng);
 
   let snap, snappedPoint, snapLine;
   if (nearbySpatialIndexKeys.length === 0 && routing) {
-    if (routing) {
-      populateAndShowModal({
-        title: "Snapping error",
-        content:
-          `No segments found within buffer around (${lat.toFixed(
-            3
-          )}, ${lng.toFixed(3)}). Try closer ` +
-          `to the road network or unchecking 'Route between segments'.`,
-      });
-      return;
-    } else {
-      routeData.push({ clickedPoint });
-    }
+    populateAndShowModal({
+      title: "Snapping error",
+      content:
+        `No segments found within buffer around (${lat.toFixed(
+          3
+        )}, ${lng.toFixed(3)}). Try closer ` +
+        `to the road network or unchecking 'Route between segments'.`,
+    });
+    return;
+  } else if (nearbySpatialIndexKeys.length === 0) {
+    // not routing so not crucial that there was a nearby segment right now
+    // may become important if we change to routing as it will prevent us
+    // adjusting the straight line
+    routeData.push({ clickedPoint });
   } else if (nearbySpatialIndexKeys.length !== 0) {
     snap = findNearestSegmentAndPointOnIt({ lat, lng }, nearbySpatialIndexKeys);
-    snappedPoint = new L.CircleMarker(
-      new L.LatLng(snap.point.lat, snap.point.lng),
-      {
-        radius: 8,
-        fillOpacity: 1.0,
-        fillColor: fillColor,
-        color: "blue",
-        pane: "points",
-      }
-    );
+    snappedPoint = createCircleMarker(snap.point.lat, snap.point.lng, {
+      fillColor,
+    });
 
     snapLine = new L.Polyline(
       [
@@ -1021,13 +1031,7 @@ const addDistanceMarkersForRouting = (newRouteData) => {
       }
       [lng, lat] = segment.geometry.coordinates[index];
 
-      const kmMarker = new L.CircleMarker(new L.LatLng(lat, lng), {
-        radius: 8,
-        fillOpacity: 1.0,
-        fillColor: "blue",
-        color: "blue",
-        pane: "points",
-      });
+      const kmMarker = createCircleMarker(lat, lng, { fillColor: "blue" });
       kmMarker.addTo(map);
 
       let kmLabelText = createDistanceTooltip(
@@ -1057,13 +1061,7 @@ const addDistanceMarkersForStraightLine = (newRouteData, currentLengthKm) => {
     const lat = latLngs[0].lat + factor * (latLngs[1].lat - latLngs[0].lat);
     const lng = latLngs[0].lng + factor * (latLngs[1].lng - latLngs[0].lng);
 
-    const kmMarker = new L.CircleMarker(new L.LatLng(lat, lng), {
-      radius: 8,
-      fillOpacity: 1.0,
-      fillColor: "blue",
-      color: "blue",
-      pane: "points",
-    });
+    const kmMarker = createCircleMarker(lat, lng, { fillColor: "blue" });
     kmMarker.addTo(map);
 
     let kmLabelText = createDistanceTooltip(lat, lng, `${kmLabel.toFixed(0)}`);
