@@ -915,7 +915,8 @@ function addSegmentToRouteSection(
 }
 
 let routeSections = [
-  /*
+  /* A route section comprises part of a run between the current user event
+  and the previous one. Data stored is:
   {
     clickedPoint: geometry of location that user clicked
     snappedPoint: geometry of nearest snap
@@ -923,6 +924,8 @@ let routeSections = [
     routeFromPrevious: geometry of routed line from previous
     lineFromPrevious: geometry of straight line from previous
     segmentIds: if routed, ordered segments from previous,
+    predecessorId: id of previous route section, used to determine valid redo actions
+    distanceKm: distance in km that this route section comprises
   }
   */
 ];
