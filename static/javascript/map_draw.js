@@ -647,8 +647,109 @@ function getNearbySegments(lat, lng) {
   return nearbySpatialIndexKeys;
 }
 
+/** Reset style of the last point in a route prior to adding a new one. */
+function resetIntermediatePointStyles(lastRouteSection) {
+  const props = { fillColor: "blue", radius: 4 };
+  lastRouteSection.clickedPoint.setStyle(props);
+  try {
+    lastRouteSection.snappedPoint.setStyle(props);
+  } catch (err) {
+    // no snap
+  }
+}
+
+/** Add the first point in a run. */
+function addFirstPointInRoute(firstPoint, routing) {
+  routing
+    ? firstPoint.snappedPoint.addTo(map)
+    : firstPoint.clickedPoint.addTo(map);
+  routeData.push(firstPoint);
+  document.getElementById("undo").disabled = false;
+  document.getElementById("reset").disabled = false;
+  document.getElementById("submit").disabled = false;
+}
+
+/** Create a line joining the clicked point with the point it is snapped to. */
+function createSnapLine(snap, clickedLat, clickedLng) {
+  return new L.Polyline(
+    [
+      [snap.point.lat, snap.point.lng],
+      [clickedLat, clickedLng],
+    ],
+    {
+      color: "#fd7e14",
+      weight: 3,
+      opacity: 1.0,
+      pane: "points",
+    }
+  );
+}
+
+/** Modify non-routing line when switching to routing.
+ *
+ * When the previous route section was a non-routed straight line and the next
+ * is routed, we need to change the end of the straight line from the clicked
+ * point location to the associated snap.
+ */
+function applyNonRoutingToRoutingCorrection(distanceKm) {
+  const previousRouteSection = routeData[routeData.length - 1];
+  const previousAgainRouteSection = routeData[routeData.length - 2];
+
+  // find the point where our modified line will start (the same as the
+  // existing line)
+  const previousAgainPoint = map.hasLayer(
+    previousAgainRouteSection.snappedPoint
+  )
+    ? previousAgainRouteSection.snappedPoint
+    : previousAgainRouteSection.clickedPoint;
+
+  const overrideStraightLineCoords = [
+    [previousAgainPoint._latlng.lat, previousAgainPoint._latlng.lng],
+    [
+      previousRouteSection.snappedPoint._latlng.lat,
+      previousRouteSection.snappedPoint._latlng.lng,
+    ],
+  ];
+  const overrideStraightLine = new L.Polyline(overrideStraightLineCoords, {
+    color: "#dc3545",
+    weight: 3,
+    opacity: 1.0,
+    pane: "route",
+    dashArray: "10, 5",
+    dashOffset: "0",
+  });
+
+  removeGeometries(previousRouteSection, ["clickedPoint", "lineFromPrevious"]);
+
+  const newPreviousDistanceKm =
+    haversineDistanceMetres(...overrideStraightLineCoords) / 1000;
+  const newPreviousRouteSection = {
+    ...previousRouteSection,
+    distanceKm: newPreviousDistanceKm,
+    lineFromPrevious: overrideStraightLine,
+  };
+
+  distanceKm += newPreviousDistanceKm - previousRouteSection.distanceKm;
+  previousRouteSection.snappedPoint.addTo(map);
+  overrideStraightLine.addTo(map);
+
+  // make sure to remove the old line's distance so that adding/removing
+  // km labels will be done correctly
+  const currentLengthKm = getCurrentLengthKm();
+  const distanceKmPriorToStraightLine =
+    currentLengthKm - previousRouteSection.distanceKm;
+  removeKmMarkersAndLabels(currentLengthKm, distanceKmPriorToStraightLine);
+  addDistanceMarkersForStraightLine(
+    newPreviousRouteSection,
+    distanceKmPriorToStraightLine
+  );
+
+  routeData.pop();
+  routeData.push(newPreviousRouteSection);
+  return distanceKm;
+}
+
 // TODO: clean up this function
-// TODO: record better route overall, not just between current and previous point
 let routeData = [
   /*
   {
@@ -697,19 +798,7 @@ function snapToNetwork(event) {
     snappedPoint = createCircleMarker(snap.point.lat, snap.point.lng, {
       fillColor,
     });
-
-    snapLine = new L.Polyline(
-      [
-        [snap.point.lat, snap.point.lng],
-        [lat, lng],
-      ],
-      {
-        color: "#fd7e14",
-        weight: 3,
-        opacity: 1.0,
-        pane: "points",
-      }
-    );
+    snapLine = createSnapLine(snap, lat, lng);
   }
 
   newRouteData = {
@@ -720,24 +809,13 @@ function snapToNetwork(event) {
     id: uuidv4(),
   };
 
-  // reset style of new set of intermediate clicked points and their snaps
-  routeData.slice(1).forEach((data) => {
-    const props = { fillColor: "blue", radius: 4 };
-    data.clickedPoint.setStyle(props);
-    try {
-      data.snappedPoint.setStyle(props);
-    } catch (err) {
-      // no snap for the previous point
-    }
-  });
+  // if we only have the first point, we always want to keep its style
+  if (routeData.length > 1) {
+    resetIntermediatePointStyles(last(routeData));
+  }
 
-  // deal with first point case, where we can now undo and reset
   if (routeData.length === 0) {
-    routing ? snappedPoint.addTo(map) : clickedPoint.addTo(map);
-    routeData.push(newRouteData);
-    document.getElementById("undo").disabled = false;
-    document.getElementById("reset").disabled = false;
-    document.getElementById("submit").disabled = false;
+    addFirstPointInRoute(newRouteData, routing);
     return;
   }
 
@@ -750,60 +828,11 @@ function snapToNetwork(event) {
   };
 
   if (routing && previousRouteData.snappedPoint !== undefined) {
-    // clean up previous line if it was a straight line
     let distanceKm = 0.0;
+
+    // clean up previous line if it was a straight line
     if (map.hasLayer(previousRouteData.lineFromPrevious)) {
-      // determine where the start of our new overridden line should be
-      const previousAgainRouteData = routeData[routeData.length - 2];
-      const previousAgainPoint = map.hasLayer(
-        previousAgainRouteData.snappedPoint
-      )
-        ? previousAgainRouteData.snappedPoint
-        : previousAgainRouteData.clickedPoint;
-
-      const overrideStraightLineCoords = [
-        [previousAgainPoint._latlng.lat, previousAgainPoint._latlng.lng],
-        [
-          previousRouteData.snappedPoint._latlng.lat,
-          previousRouteData.snappedPoint._latlng.lng,
-        ],
-      ];
-      const overrideStraightLine = new L.Polyline(overrideStraightLineCoords, {
-        color: "#dc3545",
-        weight: 3,
-        opacity: 1.0,
-        pane: "route",
-        dashArray: "10, 5",
-        dashOffset: "0",
-      });
-
-      removeGeometries(previousRouteData, ["clickedPoint", "lineFromPrevious"]);
-
-      const newPreviousDistanceKm =
-        haversineDistanceMetres(...overrideStraightLineCoords) / 1000;
-      const newPreviousRouteData = {
-        ...previousRouteData,
-        distanceKm: newPreviousDistanceKm,
-        lineFromPrevious: overrideStraightLine,
-      };
-
-      distanceKm += newPreviousDistanceKm - previousRouteData.distanceKm;
-      previousRouteData.snappedPoint.addTo(map);
-      overrideStraightLine.addTo(map);
-
-      // make sure to remove the old line's distance so that adding/removing
-      // km labels will be done correctly
-      const currentLengthKm = getCurrentLengthKm();
-      const distanceKmPriorToStraightLine =
-        currentLengthKm - previousRouteData.distanceKm;
-      removeKmMarkersAndLabels(currentLengthKm, distanceKmPriorToStraightLine);
-      addDistanceMarkersForStraightLine(
-        newPreviousRouteData,
-        distanceKmPriorToStraightLine
-      );
-
-      routeData.pop();
-      routeData.push(newPreviousRouteData);
+      distanceKm = applyNonRoutingToRoutingCorrection(distanceKm);
     }
 
     const previousSegment =
