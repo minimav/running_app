@@ -775,6 +775,50 @@ function createRoutingPayload(previousRouteSection, snap) {
   };
 }
 
+/** Add a straight line route section. */
+function addStraightLineRouteSection(
+  lat,
+  lng,
+  previousRouteSection,
+  newRouteSection
+) {
+  // figure out whether used snap or click at previous point
+  const previousPoint = map.hasLayer(previousRouteSection.snappedPoint)
+    ? previousRouteSection.snappedPoint
+    : previousRouteSection.clickedPoint;
+
+  // not routing, so line ends at the location the user clicked
+  const straightLine = new L.Polyline(
+    [
+      [previousPoint._latlng.lat, previousPoint._latlng.lng],
+      [lat, lng],
+    ],
+    {
+      color: "blue",
+      weight: 3,
+      opacity: 1.0,
+      dashArray: "10, 5",
+      dashOffset: "0",
+    }
+  );
+  const distanceKm =
+    haversineDistanceMetres(
+      [previousPoint._latlng.lat, previousPoint._latlng.lng],
+      [lat, lng]
+    ) / 1000;
+
+  newRouteSection = {
+    ...newRouteSection,
+    lineFromPrevious: straightLine,
+    distanceKm: distanceKm,
+  };
+  straightLine.addTo(map);
+  newRouteSection.clickedPoint.addTo(map);
+  addDistanceMarkersForStraightLine(newRouteSection, getCurrentLengthKm());
+  routeData.push(newRouteSection);
+  updateLengthKm(distanceKm);
+}
+
 // TODO: clean up this function
 let routeData = [
   /*
@@ -985,41 +1029,7 @@ function snapToNetwork(event) {
         updateLengthKm(distanceKm);
       });
   } else {
-    // figure out whether used snap or click at previous point
-    const previousPoint = map.hasLayer(previousRouteData.snappedPoint)
-      ? previousRouteData.snappedPoint
-      : previousRouteData.clickedPoint;
-
-    // not routing, so go to the location the user clicked
-    const straightLine = new L.Polyline(
-      [
-        [previousPoint._latlng.lat, previousPoint._latlng.lng],
-        [lat, lng],
-      ],
-      {
-        color: "blue",
-        weight: 3,
-        opacity: 1.0,
-        dashArray: "10, 5",
-        dashOffset: "0",
-      }
-    );
-    const distanceKm =
-      haversineDistanceMetres(
-        [previousPoint._latlng.lat, previousPoint._latlng.lng],
-        [lat, lng]
-      ) / 1000;
-
-    newRouteData = {
-      ...newRouteData,
-      lineFromPrevious: straightLine,
-      distanceKm: distanceKm,
-    };
-    straightLine.addTo(map);
-    clickedPoint.addTo(map);
-    addDistanceMarkersForStraightLine(newRouteData, getCurrentLengthKm());
-    routeData.push(newRouteData);
-    updateLengthKm(distanceKm);
+    addStraightLineRouteSection(lat, lng, previousRouteData, newRouteData);
   }
 }
 
