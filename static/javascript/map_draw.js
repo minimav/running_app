@@ -749,6 +749,32 @@ function applyNonRoutingToRoutingCorrection(distanceKm) {
   return distanceKm;
 }
 
+/** Create payload for API request to route between two snaps on segments. */
+function createRoutingPayload(previousRouteSection, snap) {
+  const previousSegment =
+    segmentData[previousRouteSection.snapInfo.spatialIndexKey]["properties"];
+  const currentSegment = segmentData[snap.spatialIndexKey]["properties"];
+
+  return {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from_segment_id: previousSegment["segment_id"],
+      from_segment_distance_along_segment_metres:
+        previousRouteSection.snapInfo.distanceAlongSegmentMetres,
+      from_segment_start_node: previousSegment["start_node"],
+      from_segment_end_node: previousSegment["end_node"],
+      to_segment_id: currentSegment["segment_id"],
+      to_segment_distance_along_segment_metres: snap.distanceAlongSegmentMetres,
+      to_segment_start_node: currentSegment["start_node"],
+      to_segment_end_node: currentSegment["end_node"],
+    }),
+  };
+}
+
 // TODO: clean up this function
 let routeData = [
   /*
@@ -835,29 +861,7 @@ function snapToNetwork(event) {
       distanceKm = applyNonRoutingToRoutingCorrection(distanceKm);
     }
 
-    const previousSegment =
-      segmentData[previousRouteData.snapInfo.spatialIndexKey]["properties"];
-    const currentSegment = segmentData[snap.spatialIndexKey]["properties"];
-
-    const payload = {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from_segment_id: previousSegment["segment_id"],
-        from_segment_distance_along_segment_metres:
-          previousRouteData.snapInfo.distanceAlongSegmentMetres,
-        from_segment_start_node: previousSegment["start_node"],
-        from_segment_end_node: previousSegment["end_node"],
-        to_segment_id: currentSegment["segment_id"],
-        to_segment_distance_along_segment_metres:
-          snap.distanceAlongSegmentMetres,
-        to_segment_start_node: currentSegment["start_node"],
-        to_segment_end_node: currentSegment["end_node"],
-      }),
-    };
+    const payload = createRoutingPayload(previousRouteData, snap);
     fetch("/route", payload)
       .then((response) => response.json())
       .then((data) => {
