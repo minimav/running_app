@@ -373,7 +373,7 @@ function updateLengthKm(lengthKm) {
 document.querySelector("#duration").addEventListener("change", () => {
   try {
     const distanceMiles =
-      1.609 * parseFloat(document.getElementById("current-distance").value);
+      parseFloat(document.getElementById("current-distance").value) / 1.609;
     updateRunSpeed(distanceMiles);
   } catch (err) {}
 });
