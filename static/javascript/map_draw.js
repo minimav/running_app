@@ -1000,18 +1000,18 @@ function snapToNetwork(event) {
   if (routing && previousRouteSection.snappedPoint !== undefined) {
     let distanceKm = 0.0;
 
-    // clean up if we have toggled routing between the first and second points
+    // apply corrections due to routing toggling
     if (map.hasLayer(previousRouteSection.lineFromPrevious)) {
-      // in this case we need to adjust the end of the previous straight line
-      // from the clicked point to its snap
+      // In this case the previous route section was unrouted but this one is
+      // routed. We need to adjust the end of the previous straight line from
+      // the clicked point to its snap.
       distanceKm = applyNonRoutingToRoutingCorrection(distanceKm);
     } else if (
       routeSections.length === 1 &&
       map.hasLayer(previousRouteSection.clickedPoint)
     ) {
-      // in this case we need to add the snap line and include its distance
-      // this can only happen at the beginning of a route, since otherwise it
-      // will fall into the previous correction
+      // In this case the first point was unrouted but the new one is routed.
+      // We need to add the snap line and include its distance.
       previousRouteSection.snapLine.addTo(map);
       newRouteSection["snapLineCorrection"] = previousRouteSection.snapLine;
       const firstLatLng = previousRouteSection.clickedPoint._latlng;
