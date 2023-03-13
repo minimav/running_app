@@ -20,6 +20,16 @@ const routePointStyle = {
   pane: "points",
 };
 
+// default style for a straight line section of a route
+const straightLineStyle = {
+  color: "#dc3545",
+  weight: 3,
+  opacity: 1.0,
+  pane: "route",
+  dashArray: "10, 5",
+  dashOffset: "0",
+};
+
 /** Create a circle marker at a location with overriding styles. */
 function createCircleMarker(lat, lng, style) {
   return new L.CircleMarker(new L.LatLng(lat, lng), {
@@ -451,6 +461,7 @@ function undo() {
       "snapLine",
       "lineFromPrevious",
       "routeFromPrevious",
+      "snapLineCorrection",
     ]);
     const oldDistanceKm = getCurrentLengthKm();
     updateLengthKm(-previousRouteSection.distanceKm ?? 0.0);
@@ -521,6 +532,7 @@ function reset() {
       "snapLine",
       "lineFromPrevious",
       "routeFromPrevious",
+      "snapLineCorrection",
     ]);
   });
   routeSections = [];
@@ -676,12 +688,7 @@ function createSnapLine(snap, clickedLat, clickedLng) {
       [snap.point.lat, snap.point.lng],
       [clickedLat, clickedLng],
     ],
-    {
-      color: "#fd7e14",
-      weight: 3,
-      opacity: 1.0,
-      pane: "points",
-    }
+    straightLineStyle
   );
 }
 
@@ -710,14 +717,10 @@ function applyNonRoutingToRoutingCorrection(distanceKm) {
       previousRouteSection.snappedPoint._latlng.lng,
     ],
   ];
-  const overrideStraightLine = new L.Polyline(overrideStraightLineCoords, {
-    color: "#dc3545",
-    weight: 3,
-    opacity: 1.0,
-    pane: "route",
-    dashArray: "10, 5",
-    dashOffset: "0",
-  });
+  const overrideStraightLine = new L.Polyline(
+    overrideStraightLineCoords,
+    straightLineStyle
+  );
 
   removeGeometries(previousRouteSection, ["clickedPoint", "lineFromPrevious"]);
 
@@ -997,9 +1000,26 @@ function snapToNetwork(event) {
   if (routing && previousRouteSection.snappedPoint !== undefined) {
     let distanceKm = 0.0;
 
-    // clean up previous line if it was a straight line
+    // apply corrections due to routing toggling
     if (map.hasLayer(previousRouteSection.lineFromPrevious)) {
+      // In this case the previous route section was unrouted but this one is
+      // routed. We need to adjust the end of the previous straight line from
+      // the clicked point to its snap.
       distanceKm = applyNonRoutingToRoutingCorrection(distanceKm);
+    } else if (
+      routeSections.length === 1 &&
+      map.hasLayer(previousRouteSection.clickedPoint)
+    ) {
+      // In this case the first point was unrouted but the new one is routed.
+      // We need to add the snap line and include its distance.
+      previousRouteSection.snapLine.addTo(map);
+      newRouteSection["snapLineCorrection"] = previousRouteSection.snapLine;
+      const firstLatLng = previousRouteSection.clickedPoint._latlng;
+      distanceKm +=
+        haversineDistanceMetres(
+          [firstLatLng.lat, firstLatLng.lng],
+          [snap.point.lat, snap.point.lng]
+        ) / 1000;
     }
 
     const payload = createRoutingPayload(previousRouteSection, snap);
