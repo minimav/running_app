@@ -32,10 +32,11 @@ const straightLineStyle = {
 
 /** Create a circle marker at a location with overriding styles. */
 function createCircleMarker(lat, lng, style) {
-  return new L.CircleMarker(new L.LatLng(lat, lng), {
+  const marker = new L.CircleMarker(new L.LatLng(lat, lng), {
     ...routePointStyle,
     ...style,
   });
+  return moveableMarker(map, marker);
 }
 
 /** Whether routing should be used or not. */
@@ -46,6 +47,34 @@ function useRoutingBetweenSegments() {
 /** Whether to allow multiple runs per data. */
 function allowMultipleRunsPerDate() {
   return document.getElementById("allow-multiple").checked;
+}
+
+/** Allow a circle marker to be dragged across the map. */
+function moveableMarker(map, marker) {
+  function trackCursor(e) {
+    marker.setLatLng(e.latlng);
+  }
+
+  marker.on("mousedown", (e) => {
+    map.dragging.disable();
+    map.off("click", snapToNetwork);
+    map.on("mousemove", trackCursor);
+  });
+
+  marker.on("mouseup", (e) => {
+    map.dragging.enable();
+    map.off("mousemove");
+    editRun(e);
+
+    // re-enable standard behaviour after a minimal timeout to avoid this
+    // mouseup triggering a click if we were to re-enable it within this
+    // function tiself
+    setTimeout(() => {
+      map.on("click", snapToNetwork);
+    }, 1);
+  });
+
+  return marker;
 }
 
 /** Store the current run. */
@@ -1231,6 +1260,31 @@ const upload = () => {
       // TODO: snap?
     });
 };
+
+/** Edit a run via user dragging a point. */
+function editRun(e) {
+  // store index in here so can access the relevant route section
+  console.log(e.target.options);
+
+  // redraw km markers and update run distance
+  removeKmMarkersAndLabels(getCurrentLengthKm(), 0.0);
+  // this is too slow and existing length is used when adding distance markers,
+  // hence doubling the distance
+  updateLengthKm(0.0);
+  let distanceKm = 0.0;
+  routeSections.forEach((r, index) => {
+    if (r.lineFromPrevious !== undefined) {
+      addDistanceMarkersForStraightLine(r, distanceKm);
+    } else if (r.routeFromPrevious) {
+      addDistanceMarkersForRouting(r);
+    }
+    if (r.distanceKm !== undefined) {
+      console.log(`Adding ${r.distanceKm}km for index ${index}`);
+      distanceKm += r.distanceKm;
+    }
+  });
+  updateLengthKm(distanceKm);
+}
 
 document.addEventListener("DOMContentLoaded", function (event) {
   map = L.map("map").setView([0, 0], 1);
