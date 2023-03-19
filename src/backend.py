@@ -632,7 +632,11 @@ class RunningDatabase(object):
                 AND date = ?
         """
         query_params = (run_area.username, run_area.area_name, date)
-        results = self.execute(run_id_query, query_params=query_params)
+        results = self.execute(
+            run_id_query,
+            query_params=query_params,
+            expect_data=True,
+        )
         run_ids = tuple([id for id, *_ in results])
 
         placeholders = ", ".join(["?" for _ in run_ids])
