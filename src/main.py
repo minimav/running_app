@@ -245,8 +245,8 @@ def exists_run(
 
 @app.get("/delete_run")
 def delete_run(
-    id: Optional[str],
-    date: Optional[str],
+    id: Optional[str] = None,
+    date: Optional[str] = None,
     db: RunningDatabase = Depends(database),
     current_user: models.CurrentUser = Depends(get_current_user),
 ):
