@@ -73,7 +73,6 @@ function moveableMarker(map, marker) {
       map.on("click", snapToNetwork);
     }, 1);
   });
-
   return marker;
 }
 
@@ -81,23 +80,17 @@ function moveableMarker(map, marker) {
 function createRouteLinestring(routeSections) {
   let linestringCoordStrings = [];
   routeSections
-    .flatMap((data) => {
-      if (data.routeFromPrevious !== undefined) {
-        return data.routeFromPrevious._latlngs.flatMap((x) => x);
-      } else if (data.lineFromPrevious !== undefined) {
-        return data.lineFromPrevious._latlngs.flatMap((x) => x);
-      } else {
-        return [];
-      }
-    })
-    .forEach(({ lat, lng }) => {
-      const { jitteredLat, jitteredLng } = jitter({
-        lat,
-        lng,
-        jitterProb: 0.5,
-        maxJitter: 0.000025,
+    .flatMap((data) => data.routeFromPrevious ?? data.lineFromPrevious ?? [])
+    .forEach((geometry) => {
+      geometry._latlngs.forEach(({ lat, lng }) => {
+        const { jitteredLat, jitteredLng } = jitter({
+          lat,
+          lng,
+          jitterProb: 0.5,
+          maxJitter: 0.000025,
+        });
+        linestringCoordStrings.push(`${jitteredLat} ${jitteredLng}`);
       });
-      linestringCoordStrings.push(`${jitteredLat} ${jitteredLng}`);
     });
   return `LINESTRING(${linestringCoordStrings.join(", ")})`;
 }
@@ -1084,7 +1077,7 @@ function snapToNetwork(event) {
             finalCoordinate
           );
           distanceKm += segmentInRouteSection.segment.distanceOnSegmentKm;
-          routeCoordinates.push(segmentInRouteSection.coordinates);
+          routeCoordinates.push(...segmentInRouteSection.coordinates);
           routeSegmentIds.push(segmentInRouteSection.segment);
         });
 
