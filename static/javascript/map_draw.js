@@ -77,6 +77,31 @@ function moveableMarker(map, marker) {
   return marker;
 }
 
+/** Create full run geometry as a linestring. */
+function createRouteLinestring(routeSections) {
+  let linestringCoordStrings = [];
+  routeSections
+    .flatMap((data) => {
+      if (data.routeFromPrevious !== undefined) {
+        return data.routeFromPrevious._latlngs.flatMap((x) => x);
+      } else if (data.lineFromPrevious !== undefined) {
+        return data.lineFromPrevious._latlngs.flatMap((x) => x);
+      } else {
+        return [];
+      }
+    })
+    .forEach(({ lat, lng }) => {
+      const { jitteredLat, jitteredLng } = jitter({
+        lat,
+        lng,
+        jitterProb: 0.5,
+        maxJitter: 0.000025,
+      });
+      linestringCoordStrings.push(`${jitteredLat} ${jitteredLng}`);
+    });
+  return `LINESTRING(${linestringCoordStrings.join(", ")})`;
+}
+
 /** Store the current run. */
 document.getElementById("submit").onclick = function () {
   const date = document.getElementById("run-date").value;
@@ -101,22 +126,7 @@ document.getElementById("submit").onclick = function () {
     });
   });
 
-  // create full run geometry, incorporating both routing and straight lines
-  let linestringCoordStrings = [];
-  routeSections
-    .flatMap((data) => data.routeFromPrevious ?? data.lineFromPrevious ?? [])
-    .forEach((geometry) => {
-      geometry._latlngs.forEach(({ lat, lng }) => {
-        const { jitteredLat, jitteredLng } = jitter({
-          lat,
-          lng,
-          jitterProb: 0.5,
-          maxJitter: 0.000025,
-        });
-        linestringCoordStrings.push(`${jitteredLat} ${jitteredLng}`);
-      });
-    });
-  const linestring = `LINESTRING(${linestringCoordStrings.join(", ")})`;
+  const linestring = createRouteLinestring(routeSections);
 
   if (distanceMiles === 0) {
     populateAndShowModal({
