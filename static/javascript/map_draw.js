@@ -31,12 +31,12 @@ const straightLineStyle = {
 };
 
 /** Create a circle marker at a location with overriding styles. */
-function createCircleMarker(lat, lng, style) {
+function createCircleMarker(lat, lng, style, draggable = true) {
   const marker = new L.CircleMarker(new L.LatLng(lat, lng), {
     ...routePointStyle,
     ...style,
   });
-  return moveableMarker(map, marker);
+  return draggable ? moveableMarker(map, marker) : marker;
 }
 
 /** Whether routing should be used or not. */
@@ -413,13 +413,15 @@ const getCurrentLengthKm = () => {
 };
 
 /** Update the current length due to either addition or removal of a segment from the selection. */
-function updateLengthKm(lengthKm) {
+function updateLengthKm(lengthKm, addToExisting = true) {
   if (lengthKm === undefined || isNaN(lengthKm)) {
     console.log("Cannot update run distance due to undefined lengthKm value");
     return;
   }
 
-  const newLengthKm = getCurrentLengthKm() + lengthKm;
+  const newLengthKm = addToExisting
+    ? getCurrentLengthKm() + lengthKm
+    : lengthKm;
   document.getElementById("current-distance").value = Math.max(
     0.0,
     newLengthKm
@@ -972,7 +974,12 @@ function snapToNetwork(event) {
   const routing = document.getElementById("route-on-click").checked;
 
   const fillColor = routeSections.length === 0 ? "#198754" : "#dc3545";
-  const clickedPoint = createCircleMarker(lat, lng, { fillColor });
+  const clickedPoint = createCircleMarker(
+    lat,
+    lng,
+    { fillColor },
+    (draggable = true)
+  );
 
   // we'll add to this as we go depending on snapping results
   let newRouteSection = { clickedPoint };
@@ -997,9 +1004,14 @@ function snapToNetwork(event) {
     routeSections.push({ clickedPoint });
   } else if (nearbySpatialIndexKeys.length !== 0) {
     snap = findNearestSegmentAndPointOnIt({ lat, lng }, nearbySpatialIndexKeys);
-    snappedPoint = createCircleMarker(snap.point.lat, snap.point.lng, {
-      fillColor,
-    });
+    snappedPoint = createCircleMarker(
+      snap.point.lat,
+      snap.point.lng,
+      {
+        fillColor,
+      },
+      (draggable = true)
+    );
     snapLine = createSnapLine(snap, lat, lng);
   }
 
@@ -1096,7 +1108,7 @@ function snapToNetwork(event) {
         };
         routeLine.addTo(map);
         snappedPoint.addTo(map);
-        addDistanceMarkersForRouting(newRouteSection);
+        addDistanceMarkersForRouting(newRouteSection, getCurrentLengthKm());
         routeSections.push(newRouteSection);
         updateLengthKm(distanceKm);
       });
@@ -1114,16 +1126,15 @@ function snapToNetwork(event) {
 const markersByKm = {};
 
 /** Add distance markers every km along a routed section of a run. */
-const addDistanceMarkersForRouting = (newRouteSection) => {
-  var km = getCurrentLengthKm();
+const addDistanceMarkersForRouting = (newRouteSection, currentLengthKm) => {
   newRouteSection.segmentIds.forEach((segmentInfo, index) => {
     const segment =
       segmentData[segmentIdToSpatialIndexKey[segmentInfo.segmentId]];
     const segmentLengthKm = segment.properties.length_m / 1000;
-    const kmAfterSegment = km + segmentInfo.distanceOnSegmentKm;
+    const kmAfterSegment = currentLengthKm + segmentInfo.distanceOnSegmentKm;
 
     // make sure not to label 0km!
-    var kmLabel = Math.max(1, Math.ceil(km));
+    var kmLabel = Math.max(1, Math.ceil(currentLengthKm));
     const lastPossibleKmLabel = Math.floor(kmAfterSegment);
     const numCoordinates = segment.geometry.coordinates.length;
     while (kmLabel <= lastPossibleKmLabel) {
@@ -1131,7 +1142,7 @@ const addDistanceMarkersForRouting = (newRouteSection) => {
       // linearly interpolate the index assuming roughly constant steps between
       // each lat-lng
       var lat, lng;
-      const segmentFraction = (kmLabel - km) / segmentLengthKm;
+      const segmentFraction = (kmLabel - currentLengthKm) / segmentLengthKm;
 
       // here we need to take into account both the direction of travel on the
       // segment relative to its geometry and the start segment, for which we
@@ -1151,7 +1162,12 @@ const addDistanceMarkersForRouting = (newRouteSection) => {
       }
       [lng, lat] = segment.geometry.coordinates[index];
 
-      const kmMarker = createCircleMarker(lat, lng, { fillColor: "blue" });
+      const kmMarker = createCircleMarker(
+        lat,
+        lng,
+        { fillColor: "blue" },
+        (draggable = false)
+      );
       kmMarker.addTo(map);
 
       let kmLabelText = createDistanceTooltip(
@@ -1164,7 +1180,7 @@ const addDistanceMarkersForRouting = (newRouteSection) => {
       markersByKm[kmLabel] = { kmLabelText, kmMarker };
       kmLabel += 1;
     }
-    km = kmAfterSegment;
+    currentLengthKm = kmAfterSegment;
   });
 };
 
@@ -1184,7 +1200,12 @@ const addDistanceMarkersForStraightLine = (
     const lat = latLngs[0].lat + factor * (latLngs[1].lat - latLngs[0].lat);
     const lng = latLngs[0].lng + factor * (latLngs[1].lng - latLngs[0].lng);
 
-    const kmMarker = createCircleMarker(lat, lng, { fillColor: "blue" });
+    const kmMarker = createCircleMarker(
+      lat,
+      lng,
+      { fillColor: "blue" },
+      (draggable = false)
+    );
     kmMarker.addTo(map);
 
     let kmLabelText = createDistanceTooltip(lat, lng, `${kmLabel.toFixed(0)}`);
@@ -1271,22 +1292,20 @@ function editRun(e) {
 
   // redraw km markers and update run distance
   removeKmMarkersAndLabels(getCurrentLengthKm(), 0.0);
-  // this is too slow and existing length is used when adding distance markers,
-  // hence doubling the distance
-  updateLengthKm(0.0);
+
   let distanceKm = 0.0;
-  routeSections.forEach((r, index) => {
+  routeSections.forEach((r) => {
     if (r.lineFromPrevious !== undefined) {
       addDistanceMarkersForStraightLine(r, distanceKm);
     } else if (r.routeFromPrevious) {
-      addDistanceMarkersForRouting(r);
+      addDistanceMarkersForRouting(r, distanceKm);
     }
     if (r.distanceKm !== undefined) {
-      console.log(`Adding ${r.distanceKm}km for index ${index}`);
       distanceKm += r.distanceKm;
     }
   });
-  updateLengthKm(distanceKm);
+  // make sure to reset distance to this value, not add to existing length
+  updateLengthKm(distanceKm, (addToExisting = false));
 }
 
 document.addEventListener("DOMContentLoaded", function (event) {
