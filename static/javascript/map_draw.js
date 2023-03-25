@@ -1297,6 +1297,25 @@ const upload = () => {
     });
 };
 
+/** Fully redraw all km markings along the route. */
+function fullyRedrawKmMarkers() {
+  removeKmMarkersAndLabels(getCurrentLengthKm(), 0.0);
+
+  let distanceKm = 0.0;
+  routeSections.forEach((r) => {
+    if (r.lineFromPrevious !== undefined) {
+      addDistanceMarkersForStraightLine(r, distanceKm);
+    } else if (r.routeFromPrevious) {
+      addDistanceMarkersForRouting(r, distanceKm);
+    }
+    if (r.distanceKm !== undefined) {
+      distanceKm += r.distanceKm;
+    }
+  });
+  // make sure to reset distance to this value, not add to existing length
+  updateLengthKm(distanceKm, (addToExisting = false));
+}
+
 /** Edit a run via user dragging a point. */
 function editRun(event) {
   const lng = event.latlng.lng,
@@ -1368,22 +1387,7 @@ function editRun(event) {
     // in particular, what happens if user drags to non-snappable location?
   }
 
-  // redraw km markers and update run distance
-  removeKmMarkersAndLabels(getCurrentLengthKm(), 0.0);
-
-  let distanceKm = 0.0;
-  routeSections.forEach((r) => {
-    if (r.lineFromPrevious !== undefined) {
-      addDistanceMarkersForStraightLine(r, distanceKm);
-    } else if (r.routeFromPrevious) {
-      addDistanceMarkersForRouting(r, distanceKm);
-    }
-    if (r.distanceKm !== undefined) {
-      distanceKm += r.distanceKm;
-    }
-  });
-  // make sure to reset distance to this value, not add to existing length
-  updateLengthKm(distanceKm, (addToExisting = false));
+  fullyRedrawKmMarkers();
 }
 
 document.addEventListener("DOMContentLoaded", function (event) {
