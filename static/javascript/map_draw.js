@@ -812,6 +812,23 @@ function createRoutingPayload(previousRouteSection, snap) {
   };
 }
 
+/** Create a straight line between two lat lngs. */
+function createStraightLine(startLat, startLng, endLat, endLng) {
+  return new L.Polyline(
+    [
+      [startLat, startLng],
+      [endLat, endLng],
+    ],
+    {
+      color: "blue",
+      weight: 3,
+      opacity: 1.0,
+      dashArray: "10, 5",
+      dashOffset: "0",
+    }
+  );
+}
+
 /** Add a straight line route section. */
 function addStraightLineRouteSection(
   lat,
@@ -825,18 +842,11 @@ function addStraightLineRouteSection(
     : previousRouteSection.clickedPoint;
 
   // not routing, so line ends at the location the user clicked
-  const straightLine = new L.Polyline(
-    [
-      [previousPoint._latlng.lat, previousPoint._latlng.lng],
-      [lat, lng],
-    ],
-    {
-      color: "blue",
-      weight: 3,
-      opacity: 1.0,
-      dashArray: "10, 5",
-      dashOffset: "0",
-    }
+  const straightLine = createStraightLine(
+    previousPoint._latlng.lat,
+    previousPoint._latlng.lng,
+    lat,
+    lng
   );
   const distanceKm =
     haversineDistanceMetres(
@@ -1288,8 +1298,75 @@ const upload = () => {
 };
 
 /** Edit a run via user dragging a point. */
-function editRun(e) {
-  const routeSectionIndex = e.target.options.routeSectionIndex;
+function editRun(event) {
+  const lng = event.latlng.lng,
+    lat = event.latlng.lat;
+  const routeSectionIndex = event.target.options.routeSectionIndex;
+  const routeSection = routeSections[routeSectionIndex];
+
+  // snap the new location first
+  // ...
+
+  // was this point where the user clicked or a snapped point
+  const isClickedPoint =
+    event.target._leaflet_id === routeSection.clickedPoint._leaflet_id;
+
+  if (isClickedPoint) {
+    // easier case, don't have to snap anything and only need to redraw two straight lines
+
+    if (routeSectionIndex === 0 && routeSections.length === 1) {
+      // only point, nothing to edit
+      return;
+    }
+
+    if (routeSectionIndex > 0) {
+      // not the first point, so we have a line to the previous point
+      map.removeLayer(routeSection.lineFromPrevious);
+      const previousRouteSection = routeSections[routeSectionIndex - 1];
+      const previousPoint = map.hasLayer(previousRouteSection.snappedPoint)
+        ? previousRouteSection.snappedPoint
+        : previousRouteSection.clickedPoint;
+
+      routeSection.lineFromPrevious = createStraightLine(
+        previousPoint._latlng.lat,
+        previousPoint._latlng.lng,
+        lat,
+        lng
+      );
+      routeSection.distanceKm =
+        haversineDistanceMetres(
+          [previousPoint._latlng.lat, previousPoint._latlng.lng],
+          [lat, lng]
+        ) / 1000;
+      routeSection.lineFromPrevious.addTo(map);
+    }
+
+    if (routeSectionIndex < routeSections.length - 1) {
+      // case where the user-dragged point is not the last one in the route
+      const nextRouteSection = routeSections[routeSectionIndex + 1];
+      map.removeLayer(nextRouteSection.lineFromPrevious);
+
+      const nextPoint = map.hasLayer(nextRouteSection.snappedPoint)
+        ? nextRouteSection.snappedPoint
+        : nextRouteSection.clickedPoint;
+
+      nextRouteSection.lineFromPrevious = createStraightLine(
+        lat,
+        lng,
+        nextPoint._latlng.lat,
+        nextPoint._latlng.lng
+      );
+      nextRouteSection.distanceKm =
+        haversineDistanceMetres(
+          [lat, lng],
+          [nextPoint._latlng.lat, nextPoint._latlng.lng]
+        ) / 1000;
+      nextRouteSection.lineFromPrevious.addTo(map);
+    }
+  } else {
+    // TODO: deal with snapped point case
+    // in particular, what happens if user drags to non-snappable location?
+  }
 
   // redraw km markers and update run distance
   removeKmMarkersAndLabels(getCurrentLengthKm(), 0.0);
