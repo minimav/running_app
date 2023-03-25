@@ -823,6 +823,7 @@ function createStraightLine(startLat, startLng, endLat, endLng) {
       color: "blue",
       weight: 3,
       opacity: 1.0,
+      pane: "route",
       dashArray: "10, 5",
       dashOffset: "0",
     }
