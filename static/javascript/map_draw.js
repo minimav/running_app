@@ -972,12 +972,13 @@ function snapToNetwork(event) {
     lat = event.latlng.lat;
 
   const routing = document.getElementById("route-on-click").checked;
+  const routeSectionIndex = routeSections.length;
 
   const fillColor = routeSections.length === 0 ? "#198754" : "#dc3545";
   const clickedPoint = createCircleMarker(
     lat,
     lng,
-    { fillColor },
+    { fillColor, routeSectionIndex },
     (draggable = true)
   );
 
@@ -1009,6 +1010,7 @@ function snapToNetwork(event) {
       snap.point.lng,
       {
         fillColor,
+        routeSectionIndex,
       },
       (draggable = true)
     );
@@ -1287,8 +1289,7 @@ const upload = () => {
 
 /** Edit a run via user dragging a point. */
 function editRun(e) {
-  // store index in here so can access the relevant route section
-  console.log(e.target.options);
+  const routeSectionIndex = e.target.options.routeSectionIndex;
 
   // redraw km markers and update run distance
   removeKmMarkersAndLabels(getCurrentLengthKm(), 0.0);
