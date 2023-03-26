@@ -36,7 +36,7 @@ function createCircleMarker(lat, lng, style, draggable = true) {
     ...routePointStyle,
     ...style,
   });
-  return draggable ? moveableMarker(map, marker) : marker;
+  return draggable ? makeMarkerDraggable(marker) : marker;
 }
 
 /** Whether routing should be used or not. */
@@ -49,8 +49,13 @@ function allowMultipleRunsPerDate() {
   return document.getElementById("allow-multiple").checked;
 }
 
+/** Whether points on a run can be edited or not. */
+function allowEdits() {
+  return document.getElementById("allow-edits").checked;
+}
+
 /** Allow a circle marker to be dragged across the map. */
-function moveableMarker(map, marker) {
+function makeMarkerDraggable(marker) {
   function trackCursor(e) {
     marker.setLatLng(e.latlng);
   }
@@ -74,6 +79,12 @@ function moveableMarker(map, marker) {
     }, 1);
   });
   return marker;
+}
+
+/** Turn off any drag behaviour on a marker. */
+function makeMarkerStatic(marker) {
+  marker.off("mousedown");
+  marker.off("mouseup");
 }
 
 /** Create full run geometry as a linestring. */
@@ -990,7 +1001,7 @@ function snapToNetwork(event) {
     lat,
     lng,
     { fillColor, routeSectionIndex },
-    (draggable = true)
+    (draggable = allowEdits())
   );
 
   // we'll add to this as we go depending on snapping results
@@ -1023,7 +1034,7 @@ function snapToNetwork(event) {
         fillColor,
         routeSectionIndex,
       },
-      (draggable = true)
+      (draggable = allowEdits())
     );
     snapLine = createSnapLine(snap, lat, lng);
   }
@@ -1178,7 +1189,7 @@ const addDistanceMarkersForRouting = (newRouteSection, currentLengthKm) => {
       const kmMarker = createCircleMarker(
         lat,
         lng,
-        { fillColor: "blue" },
+        { fillColor: "blue", pane: "km-markers" },
         (draggable = false)
       );
       kmMarker.addTo(map);
@@ -1216,7 +1227,7 @@ const addDistanceMarkersForStraightLine = (
     const kmMarker = createCircleMarker(
       lat,
       lng,
-      { fillColor: "blue" },
+      { fillColor: "blue", pane: "km-markers" },
       (draggable = false)
     );
     kmMarker.addTo(map);
@@ -1228,6 +1239,16 @@ const addDistanceMarkersForStraightLine = (
     kmLabel += 1;
   }
 };
+
+/** Toggle whether points can be edited or not. */
+function toggleEditing() {
+  const toggleFunc = allowEdits() ? makeMarkerDraggable : makeMarkerStatic;
+  map.eachLayer(function (layer) {
+    if (layer.options && layer.options.pane === "points") {
+      toggleFunc(layer);
+    }
+  });
+}
 
 /* Upload a run via a .tcx file. */
 const upload = () => {

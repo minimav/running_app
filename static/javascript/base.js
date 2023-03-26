@@ -178,6 +178,7 @@ const setupPanes = (map) => {
     { name: "route", zIndex: 604 },
     { name: "upload-points", zIndex: 605 },
     { name: "points", zIndex: 606 },
+    { name: "km-markers", zIndex: 607 },
   ];
   paneZIndexes.forEach(({ name, zIndex }) => {
     panes[name] = map.createPane(name);
